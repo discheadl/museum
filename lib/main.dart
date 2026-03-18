@@ -14,5 +14,5 @@ Future<void> main() async {
 
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  runApp(const MuseumApp());
+  runApp(MuseumApp());
 }

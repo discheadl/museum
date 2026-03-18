@@ -1,68 +1,101 @@
-# Museum (Flutter)
+# Museum (Flutter + Node.js API)
 
-Base para una app de museo pensada para usarse en horizontal (landscape) y navegar por imagenes.
+Base para una app de museo en horizontal que ahora consume imagenes y videos reales desde una API sencilla en Node.js/Express.
 
-## Que incluye esta base
+## Que se agrego
 
-- Orientacion bloqueada a horizontal desde `lib/main.dart` (landscapeLeft/right).
-- Navegacion principal por swipe (PageView) con “tarjetas tipo imagen”:
-  - Home: carrusel de salas (tap abre la sala).
-  - Sala: piezas navegables por swipe + thumbnails para saltar directo.
-- “Imagen” placeholder generada en codigo (`MuseumArtPanel`) lista para reemplazarse por fotos reales.
-- Datos demo en memoria para que el flujo funcione desde el dia 1.
+- API Express en `api/` con:
+  - `GET /api/health`
+  - `GET /api/rooms`
+- Servicio HTTP en Flutter (`lib/services/museum_api_service.dart`)
+- Modelos listos para `image` y `video`
+- `MuseumArtPanel` reescrito para mostrar:
+  - `Image.network(...)`
+  - `VideoPlayer(...)` en la vista principal de una pieza
+- `demo_museum.dart` convertido en repositorio demo con URLs reales, util para pruebas
 
-## Como correrlo
+## 1. Levantar la API
+
+```bash
+cd api
+npm install
+npm run dev
+```
+
+La API queda por defecto en `http://localhost:4000`.
+
+## 2. Correr Flutter contra la API
 
 ```bash
 flutter pub get
-flutter run
+flutter run --dart-define=MUSEUM_API_BASE_URL=http://localhost:4000
 ```
 
-Tests:
+En Android emulator normalmente conviene:
+
+```bash
+flutter run --dart-define=MUSEUM_API_BASE_URL=http://10.0.2.2:4000
+```
+
+En un dispositivo fisico usa la IP de tu maquina, por ejemplo:
+
+```bash
+flutter run --dart-define=MUSEUM_API_BASE_URL=http://192.168.1.25:4000
+```
+
+## 3. Esquema que consume Flutter
+
+La app espera esta estructura:
+
+```json
+{
+  "rooms": [
+    {
+      "id": "sala-origen",
+      "title": "Sala Origen",
+      "subtitle": "Rituales, territorio y memoria",
+      "accent": "#2D6A4F",
+      "coverUrl": "https://...",
+      "exhibits": [
+        {
+          "id": "origen-1",
+          "title": "Vasija ceremonial",
+          "subtitle": "Siglo XII",
+          "description": "Texto corto",
+          "accent": "#2D6A4F",
+          "mediaType": "image",
+          "mediaUrl": "https://...",
+          "thumbnailUrl": "https://..."
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 4. Donde se hizo cada cambio
+
+- API Node.js/Express: [api/src/server.js](/Users/arne/museum/api/src/server.js)
+- Datos de ejemplo para la API: [api/src/data/museum-data.js](/Users/arne/museum/api/src/data/museum-data.js)
+- Servicio HTTP Flutter: [lib/services/museum_api_service.dart](/Users/arne/museum/lib/services/museum_api_service.dart)
+- Modelos parseables: [lib/models/museum_models.dart](/Users/arne/museum/lib/models/museum_models.dart)
+- Home consumiendo API: [lib/features/home/home_screen.dart](/Users/arne/museum/lib/features/home/home_screen.dart)
+- Panel real de imagen/video: [lib/widgets/museum_art_panel.dart](/Users/arne/museum/lib/widgets/museum_art_panel.dart)
+
+## 5. Como reemplazar tus URLs por archivos propios
+
+Si quieres servir tus propios archivos desde este repo:
+
+1. Coloca fotos y videos dentro de `api/public/media/`
+2. Cambia las URLs en `api/src/data/museum-data.js`
+3. Usa rutas como:
+   - `http://localhost:4000/media/salas/origen/foto-1.jpg`
+   - `http://localhost:4000/media/salas/origen/video-1.mp4`
+
+Hay una nota rapida en [api/public/media/README.md](/Users/arne/museum/api/public/media/README.md).
+
+## Pruebas
 
 ```bash
 flutter test
 ```
-
-## Estructura de carpetas
-
-- `lib/app/`: `MuseumApp` y tema.
-- `lib/features/`: pantallas por feature (`home/`, `room/`).
-- `lib/models/`: modelos (`MuseumRoom`, `MuseumExhibit`).
-- `lib/data/`: datos demo (luego puedes conectarlo a API o DB).
-- `lib/widgets/`: widgets compartidos (placeholder de “imagen”).
-
-## Reemplazar placeholders por imagenes reales
-
-Ahora mismo las tarjetas usan `MuseumArtPanel` como placeholder visual.
-Para usar imagenes reales lo comun es:
-
-1. Agregar assets:
-
-   - Crea `assets/images/` y coloca tus imagenes.
-   - Declara los assets en `pubspec.yaml`:
-
-```yaml
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/images/
-```
-
-2. Cambiar el widget:
-
-   - Reemplaza `MuseumArtPanel(...)` por `Image.asset(...)` o `Image.network(...)` en:
-     - `lib/features/home/widgets/room_card.dart`
-     - `lib/features/room/widgets/exhibit_thumbnail.dart`
-     - `lib/features/room/room_screen.dart`
-
-## Notas de orientacion
-
-- iOS ya permite landscape en `ios/Runner/Info.plist`.
-- Android se bloquea via `SystemChrome.setPreferredOrientations(...)` en `lib/main.dart`.
-
-## Siguientes pasos tipicos
-
-- Definir el tipo de menu (overlay flotante, mapa por salas, barra lateral, etc.).
-- Sustituir `lib/data/demo_museum.dart` por tu catalogo real.
-- Agregar rutas/navegacion nombrada si el proyecto crece.
