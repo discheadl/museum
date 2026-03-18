@@ -111,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           _Dots(current: _index, total: rooms.length),
                           const Spacer(),
                           Text(
-                            'Configura la URL con --dart-define=MUSEUM_API_BASE_URL=http://127.0.0.1:63808',
+                            'Universidad de Montemorelos',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurface.withAlpha(
                                 (0.70 * 255).round(),
