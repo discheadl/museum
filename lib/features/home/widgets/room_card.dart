@@ -29,9 +29,6 @@ class RoomCard extends StatelessWidget {
                   child: MuseumArtPanel(
                     accent: room.accent,
                     label: room.title,
-                    mediaType: MuseumMediaType.image,
-                    mediaUrl: room.coverUrl,
-                    thumbnailUrl: room.coverUrl,
                     icon: Icons.collections_bookmark_outlined,
                   ),
                 ),

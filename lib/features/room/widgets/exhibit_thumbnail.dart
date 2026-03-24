@@ -48,9 +48,6 @@ class ExhibitThumbnail extends StatelessWidget {
                   child: MuseumArtPanel(
                     accent: exhibit.accent,
                     label: exhibit.title,
-                    mediaType: exhibit.mediaType,
-                    mediaUrl: exhibit.mediaUrl,
-                    thumbnailUrl: exhibit.thumbnailUrl,
                     icon: Icons.photo_outlined,
                   ),
                 ),

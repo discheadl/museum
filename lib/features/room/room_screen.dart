@@ -72,13 +72,7 @@ class _RoomScreenState extends State<RoomScreen> {
                           child: MuseumArtPanel(
                             accent: exhibit.accent,
                             label: exhibit.title,
-                            mediaType: exhibit.mediaType,
-                            mediaUrl: exhibit.mediaUrl,
-                            thumbnailUrl: exhibit.thumbnailUrl,
-                            icon: exhibit.mediaType == MuseumMediaType.video
-                                ? Icons.smart_display_outlined
-                                : Icons.image_outlined,
-                            enableVideoPlayback: true,
+                            icon: Icons.image_outlined,
                           ),
                         ),
                       ),
