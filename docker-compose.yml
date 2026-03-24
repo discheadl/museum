@@ -1,0 +1,8 @@
+services:
+  api:
+    build:
+      context: ./api
+    container_name: museum-api
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
