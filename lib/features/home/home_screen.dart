@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/museum_models.dart';
 import '../../services/museum_repository.dart';
 import '../room/room_screen.dart';
+import '../virtual_tour/virtual_tour_screen.dart';
 import 'widgets/room_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -53,6 +54,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ).push(MaterialPageRoute<void>(builder: (_) => RoomScreen(room: room)));
   }
 
+  void _openVirtualTour() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const VirtualTourScreen()));
+  }
+
   void _retry() {
     setState(() {
       _index = 0;
@@ -96,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: <Widget>[
                   SizedBox(
                     width: sidebarWidth,
-                    child: Padding(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(22, 18, 22, 18),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,8 +115,44 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: theme.textTheme.bodyLarge,
                           ),
                           const SizedBox(height: 18),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1F1B16),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Text(
+                                    'Recorrido virtual',
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Abre un mini tour 360 con hotspots para moverte entre escenas.',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  FilledButton.icon(
+                                    onPressed: _openVirtualTour,
+                                    icon: const Icon(
+                                      Icons.panorama_photosphere_select_rounded,
+                                    ),
+                                    label: const Text('Abrir recorrido'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
                           _Dots(current: _index, total: rooms.length),
-                          const Spacer(),
+                          const SizedBox(height: 24),
                           Text(
                             'Configura la URL con --dart-define=MUSEUM_API_BASE_URL=http://127.0.0.1:63808',
                             style: theme.textTheme.bodyMedium?.copyWith(
