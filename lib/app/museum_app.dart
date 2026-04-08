@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../features/home/home_screen.dart';
 import '../features/virtual_tour/virtual_tour_screen.dart';
-import '../services/museum_api_service.dart';
 import '../services/museum_repository.dart';
+import '../services/supabase_museum_service.dart';
 import 'museum_theme.dart';
 
 class MuseumApp extends StatelessWidget {
   MuseumApp({super.key, MuseumRepository? repository, this.homeOverride})
-    : repository = repository ?? MuseumApiService();
+    : repository = repository ?? SupabaseMuseumService();
 
   final MuseumRepository repository;
   final Widget? homeOverride;

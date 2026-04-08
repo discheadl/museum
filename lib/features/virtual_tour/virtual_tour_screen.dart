@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/virtual_tour_demo.dart';
+import '../../models/museum_models.dart';
 import '../../services/museum_repository.dart';
 import '../home/home_screen.dart';
 import 'widgets/tour_artwork_dialog.dart';
@@ -31,12 +32,17 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
   bool _gyroscopeEnabled = false;
   bool _showHotspotHints = true;
 
-  VirtualTourScene get _scene => demoVirtualTourScenes[_sceneIndex];
+  List<VirtualTourScene> _scenes = const <VirtualTourScene>[];
+  Object? _loadError;
+
+  VirtualTourScene? get _scene =>
+      _scenes.isEmpty ? null : _scenes[_sceneIndex];
 
   @override
   void initState() {
     super.initState();
-    _sceneIndex = _findInitialIndex();
+    _sceneIndex = 0;
+    _loadScenes();
   }
 
   @override
@@ -44,15 +50,127 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
     super.didChangeDependencies();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _precacheAround(_scene);
+      final scene = _scene;
+      if (scene != null) {
+        _precacheAround(scene);
+      }
     });
+  }
+
+  Future<void> _loadScenes() async {
+    try {
+      final List<MuseumRoom> rooms = await widget.repository.fetchRooms();
+
+      if (rooms.isEmpty) {
+        throw Exception(
+          'Supabase no devolvio salas. Revisa que existan filas en la '
+          'tabla `salas` y que las RLS policies permitan SELECT al rol anon.',
+        );
+      }
+
+      final List<MuseumRoom> withPanoramas = rooms
+          .where((MuseumRoom r) => r.coverUrl.isNotEmpty)
+          .toList(growable: false);
+
+      if (withPanoramas.isEmpty) {
+        throw Exception(
+          'Las salas no tienen `imagen_url`. Sube los panoramas y guarda la '
+          'URL publica en cada fila.',
+        );
+      }
+
+      final scenes = _buildScenesFromRooms(withPanoramas);
+
+      // Precachear el primer panorama antes de mostrar para evitar
+      // que la escena 360 quede en negro mientras se descarga.
+      final firstUrl = scenes.first.panoramaUrl;
+      if (firstUrl != null && firstUrl.isNotEmpty && mounted) {
+        try {
+          await precacheImage(NetworkImage(firstUrl), context);
+        } catch (e) {
+          debugPrint('[VirtualTour] precache fallo para $firstUrl: $e');
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _scenes = scenes;
+        _sceneIndex = _findInitialIndex();
+        _loadError = null;
+      });
+      final current = _scene;
+      if (current != null) {
+        _precacheAround(current);
+      }
+    } catch (error, stack) {
+      debugPrint('[VirtualTour] error cargando escenas: $error\n$stack');
+      if (!mounted) return;
+      setState(() => _loadError = error);
+    }
+  }
+
+  /// Construye una escena por cada sala de Supabase con hotspots de
+  /// navegacion automaticos hacia la sala anterior y siguiente.
+  List<VirtualTourScene> _buildScenesFromRooms(List<MuseumRoom> rooms) {
+    final scenes = <VirtualTourScene>[];
+    for (int i = 0; i < rooms.length; i++) {
+      final MuseumRoom room = rooms[i];
+      final hotspots = <VirtualTourHotspot>[];
+
+      if (i > 0) {
+        final MuseumRoom prev = rooms[i - 1];
+        hotspots.add(
+          VirtualTourHotspot.navigation(
+            id: '${room.id}_prev',
+            label: 'Ir a ${prev.title}',
+            targetSceneId: prev.id,
+            longitude: -120,
+            latitude: -6,
+            tint: const Color(0xFF2A9D8F),
+          ),
+        );
+      }
+
+      if (i < rooms.length - 1) {
+        final MuseumRoom next = rooms[i + 1];
+        hotspots.add(
+          VirtualTourHotspot.navigation(
+            id: '${room.id}_next',
+            label: 'Ir a ${next.title}',
+            targetSceneId: next.id,
+            longitude: 60,
+            latitude: -6,
+            tint: const Color(0xFF2A9D8F),
+          ),
+        );
+      }
+
+      scenes.add(
+        VirtualTourScene(
+          id: room.id,
+          title: room.title,
+          caption: room.subtitle,
+          assetPath: '',
+          initialLongitude: 0,
+          initialLatitude: 0,
+          hotspots: hotspots,
+          panoramaUrl: room.coverUrl,
+        ),
+      );
+    }
+    return scenes;
+  }
+
+  void _retryLoad() {
+    setState(() => _loadError = null);
+    _loadScenes();
   }
 
   int _findInitialIndex() {
     final sceneId = widget.initialSceneId;
     if (sceneId == null) return 0;
 
-    final index = demoVirtualTourScenes.indexWhere(
+    final index = _scenes.indexWhere(
       (VirtualTourScene scene) => scene.id == sceneId,
     );
     return index < 0 ? 0 : index;
@@ -63,23 +181,22 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
   }
 
   void _goToScene(String sceneId) {
-    final nextIndex = demoVirtualTourScenes.indexWhere(
+    if (_scenes.isEmpty) return;
+    final nextIndex = _scenes.indexWhere(
       (VirtualTourScene scene) => scene.id == sceneId,
     );
     if (nextIndex < 0 || nextIndex == _sceneIndex) return;
 
-    _precacheAround(demoVirtualTourScenes[nextIndex]);
+    _precacheAround(_scenes[nextIndex]);
     setState(() => _sceneIndex = nextIndex);
   }
 
   void _goToAdjacent(int delta) {
-    final nextIndex = (_sceneIndex + delta).clamp(
-      0,
-      demoVirtualTourScenes.length - 1,
-    );
+    if (_scenes.isEmpty) return;
+    final nextIndex = (_sceneIndex + delta).clamp(0, _scenes.length - 1);
     if (nextIndex == _sceneIndex) return;
 
-    _precacheAround(demoVirtualTourScenes[nextIndex]);
+    _precacheAround(_scenes[nextIndex]);
     setState(() => _sceneIndex = nextIndex);
   }
 
@@ -195,27 +312,30 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
   }
 
   void _precacheAround(VirtualTourScene scene) {
+    if (_scenes.isEmpty) return;
     _precacheScene(scene);
 
-    final currentIndex = demoVirtualTourScenes.indexWhere(
+    final currentIndex = _scenes.indexWhere(
       (VirtualTourScene item) => item.id == scene.id,
     );
 
     if (currentIndex > 0) {
-      _precacheScene(demoVirtualTourScenes[currentIndex - 1]);
+      _precacheScene(_scenes[currentIndex - 1]);
     }
 
-    if (currentIndex < demoVirtualTourScenes.length - 1) {
-      _precacheScene(demoVirtualTourScenes[currentIndex + 1]);
+    if (currentIndex >= 0 && currentIndex < _scenes.length - 1) {
+      _precacheScene(_scenes[currentIndex + 1]);
     }
 
     for (final VirtualTourHotspot hotspot in scene.hotspots) {
       if (hotspot.targetSceneId == null) continue;
 
-      final VirtualTourScene target = demoVirtualTourScenes.firstWhere(
+      final int targetIndex = _scenes.indexWhere(
         (VirtualTourScene item) => item.id == hotspot.targetSceneId,
       );
-      _precacheScene(target);
+      if (targetIndex >= 0) {
+        _precacheScene(_scenes[targetIndex]);
+      }
     }
   }
 
@@ -223,12 +343,61 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
     if (_precachedScenes.contains(scene.id)) return;
 
     _precachedScenes.add(scene.id);
-    precacheImage(AssetImage(scene.assetPath), context);
+    final url = scene.panoramaUrl;
+    if (url != null && url.isNotEmpty) {
+      precacheImage(NetworkImage(url), context);
+    } else {
+      precacheImage(AssetImage(scene.assetPath), context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final scene = _scene;
+
+    if (scene == null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: _loadError != null
+              ? Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(
+                        Icons.cloud_off_rounded,
+                        color: Colors.white70,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'No fue posible cargar el recorrido desde Supabase.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _loadError.toString(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: _retryLoad,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                )
+              : const CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
 
     return Scaffold(
       key: _scaffoldKey,
@@ -320,8 +489,7 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
                   const Spacer(),
                   TourNavigationBar(
                     canGoBack: _sceneIndex > 0,
-                    canGoForward:
-                        _sceneIndex < demoVirtualTourScenes.length - 1,
+                    canGoForward: _sceneIndex < _scenes.length - 1,
                     onBack: () => _goToAdjacent(-1),
                     onForward: () => _goToAdjacent(1),
                     onClose: _handleClose,

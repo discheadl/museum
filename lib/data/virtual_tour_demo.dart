@@ -12,6 +12,7 @@ class VirtualTourScene {
     required this.initialLongitude,
     required this.initialLatitude,
     required this.hotspots,
+    this.panoramaUrl,
   });
 
   final String id;
@@ -21,6 +22,27 @@ class VirtualTourScene {
   final double initialLongitude;
   final double initialLatitude;
   final List<VirtualTourHotspot> hotspots;
+
+  /// URL remota del panorama (Supabase). Si esta presente y no es vacia,
+  /// debe usarse en lugar del [assetPath] local.
+  final String? panoramaUrl;
+
+  VirtualTourScene copyWith({
+    String? title,
+    String? caption,
+    String? panoramaUrl,
+  }) {
+    return VirtualTourScene(
+      id: id,
+      title: title ?? this.title,
+      caption: caption ?? this.caption,
+      assetPath: assetPath,
+      initialLongitude: initialLongitude,
+      initialLatitude: initialLatitude,
+      hotspots: hotspots,
+      panoramaUrl: panoramaUrl ?? this.panoramaUrl,
+    );
+  }
 }
 
 @immutable

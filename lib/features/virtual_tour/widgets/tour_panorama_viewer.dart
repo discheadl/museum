@@ -45,8 +45,16 @@ class TourPanoramaViewer extends StatelessWidget {
           ? SensorControl.orientation
           : SensorControl.none,
       hotspots: scene.hotspots.map(_buildHotspot).toList(growable: false),
-      child: Image.asset(scene.assetPath, fit: BoxFit.cover),
+      child: _buildPanoramaImage(),
     );
+  }
+
+  Image _buildPanoramaImage() {
+    final url = scene.panoramaUrl;
+    if (url != null && url.isNotEmpty) {
+      return Image.network(url, fit: BoxFit.cover, gaplessPlayback: true);
+    }
+    return Image.asset(scene.assetPath, fit: BoxFit.cover);
   }
 
   Hotspot _buildHotspot(VirtualTourHotspot hotspot) {
