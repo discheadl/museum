@@ -81,8 +81,6 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
 
       final scenes = _buildScenesFromRooms(withPanoramas);
 
-      // Precachear el primer panorama antes de mostrar para evitar
-      // que la escena 360 quede en negro mientras se descarga.
       final firstUrl = scenes.first.panoramaUrl;
       if (firstUrl != null && firstUrl.isNotEmpty && mounted) {
         try {
@@ -109,27 +107,17 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
     }
   }
 
-  /// Construye una escena por cada sala de Supabase con hotspots de
-  /// navegacion automaticos hacia la sala anterior y siguiente.
   List<VirtualTourScene> _buildScenesFromRooms(List<MuseumRoom> rooms) {
+    const Color exhibitTint = Color(0xFFE76F51);
+
     final scenes = <VirtualTourScene>[];
     for (int i = 0; i < rooms.length; i++) {
       final MuseumRoom room = rooms[i];
       final hotspots = <VirtualTourHotspot>[];
 
-      if (i > 0) {
-        final MuseumRoom prev = rooms[i - 1];
-        hotspots.add(
-          VirtualTourHotspot.navigation(
-            id: '${room.id}_prev',
-            label: 'Ir a ${prev.title}',
-            targetSceneId: prev.id,
-            longitude: -120,
-            latitude: -6,
-            tint: const Color(0xFF2A9D8F),
-          ),
-        );
-      }
+      final double navYaw = room.yaw ?? (i == 0 ? 202 : 30);
+      final double navPitch = room.pitch ?? -8;
+      const Color navTint = Color(0xFF2A9D8F);
 
       if (i < rooms.length - 1) {
         final MuseumRoom next = rooms[i + 1];
@@ -138,9 +126,47 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
             id: '${room.id}_next',
             label: 'Ir a ${next.title}',
             targetSceneId: next.id,
-            longitude: 60,
-            latitude: -6,
-            tint: const Color(0xFF2A9D8F),
+            longitude: navYaw,
+            latitude: navPitch,
+            tint: navTint,
+          ),
+        );
+      } else if (i > 0) {
+        final MuseumRoom prev = rooms[i - 1];
+        hotspots.add(
+          VirtualTourHotspot.navigation(
+            id: '${room.id}_prev',
+            label: 'Ir a ${prev.title}',
+            targetSceneId: prev.id,
+            longitude: navYaw,
+            latitude: navPitch,
+            tint: navTint,
+          ),
+        );
+      }
+
+      for (final MuseumExhibit exhibit in room.exhibits) {
+        final double? yaw = exhibit.yaw;
+        final double? pitch = exhibit.pitch;
+        if (yaw == null || pitch == null) continue;
+
+        hotspots.add(
+          VirtualTourHotspot.info(
+            id: 'exhibit_${exhibit.id}',
+            label: exhibit.title,
+            artwork: VirtualTourArtwork(
+              id: exhibit.id,
+              title: exhibit.title,
+              subtitle: exhibit.subtitle,
+              description: exhibit.description,
+              author: '',
+              dateLabel: '',
+              context: '',
+              imagePath: exhibit.mediaUrl,
+            ),
+            longitude: yaw,
+            latitude: pitch,
+            tint: exhibitTint,
           ),
         );
       }
@@ -487,12 +513,15 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
                     ],
                   ),
                   const Spacer(),
-                  TourNavigationBar(
-                    canGoBack: _sceneIndex > 0,
-                    canGoForward: _sceneIndex < _scenes.length - 1,
-                    onBack: () => _goToAdjacent(-1),
-                    onForward: () => _goToAdjacent(1),
-                    onClose: _handleClose,
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TourNavigationBar(
+                      canGoBack: _sceneIndex > 0,
+                      canGoForward: _sceneIndex < _scenes.length - 1,
+                      onBack: () => _goToAdjacent(-1),
+                      onForward: () => _goToAdjacent(1),
+                      onClose: _handleClose,
+                    ),
                   ),
                 ],
               ),

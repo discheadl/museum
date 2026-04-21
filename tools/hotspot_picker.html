@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selector de hotspots 360°</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1216;
+      --panel: #181d24;
+      --border: #2a313b;
+      --accent: #e76f51;
+      --text: #f3eee6;
+      --muted: #8a94a3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "header header"
+        "viewer sidebar";
+      height: 100vh;
+    }
+
+    header {
+      grid-area: header;
+      padding: 14px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+
+    header .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .url-form {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .url-form input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      background: #0b0e12;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .url-form input[type="file"] {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    button {
+      padding: 8px 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    button:hover { filter: brightness(1.1); }
+
+    #viewer {
+      grid-area: viewer;
+      position: relative;
+      background: #000;
+    }
+
+    #panorama { width: 100%; height: 100%; }
+
+    .live-coords {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .live-coords .box {
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .live-coords .box .lbl {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .live-coords .box.captured {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(231, 111, 81, 0.18);
+    }
+
+    .live-coords b { color: var(--accent); }
+
+    aside {
+      grid-area: sidebar;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      padding: 18px;
+      overflow-y: auto;
+    }
+
+    aside h2 {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 10px;
+    }
+
+    .help {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .picks { display: flex; flex-direction: column; gap: 8px; }
+
+    .pick {
+      background: #0b0e12;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .pick .num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .pick .coords { flex: 1; }
+    .pick .coords b { color: var(--accent); }
+
+    .pick .copy {
+      padding: 4px 8px;
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .pick .copy:hover { color: var(--text); border-color: var(--accent); }
+
+    .empty {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 14px;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .toolbar button { flex: 1; }
+
+    @media (max-width: 900px) {
+      body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 60vh 1fr;
+        grid-template-areas: "header" "viewer" "sidebar";
+      }
+      aside { border-left: none; border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Selector de hotspots 360°</h1>
+    <span class="hint">Click sobre la imagen para capturar yaw/pitch.</span>
+    <form class="url-form" id="urlForm">
+      <input type="text" id="urlInput" placeholder="URL pública del panorama (Supabase storage)…">
+      <input type="file" id="fileInput" accept="image/*">
+      <button type="submit">Cargar</button>
+    </form>
+  </header>
+
+  <div id="viewer">
+    <div id="panorama"></div>
+    <div class="live-coords" id="liveCoords">
+      <div class="box">
+        <span class="lbl">cursor (hover)</span>
+        yaw <b><span id="liveYaw">—</span></b> · pitch <b><span id="livePitch">—</span></b>
+      </div>
+      <div class="box captured">
+        <span class="lbl">último click</span>
+        yaw <b><span id="lastYaw">—</span></b> · pitch <b><span id="lastPitch">—</span></b>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <h2>Puntos capturados</h2>
+    <p class="help">
+      Cada click sobre la panorámica añade una entrada con sus coordenadas.
+      Copia los valores y guárdalos en las columnas <code>yaw</code> y
+      <code>pitch</code> de la tabla <code>exhibiciones</code> en Supabase.
+      <br><br>
+      <b>Convención:</b> yaw 0 = centro de la imagen, +90 = derecha, -90 = izquierda,
+      ±180 = atrás. pitch 0 = horizonte, +90 = arriba, -90 = abajo. Coincide con
+      <code>panorama_viewer</code> de Flutter.
+    </p>
+    <div class="toolbar">
+      <button class="secondary" id="clearBtn">Limpiar</button>
+      <button class="secondary" id="copyAllBtn">Copiar todo</button>
+    </div>
+    <div class="picks" id="picks">
+      <div class="empty" id="emptyState">Aún no hay puntos.</div>
+    </div>
+  </aside>
+
+  <script>
+    let viewer = null;
+    const picks = [];
+
+    const elPicks = document.getElementById('picks');
+    const elEmpty = document.getElementById('emptyState');
+    const elLiveYaw = document.getElementById('liveYaw');
+    const elLivePitch = document.getElementById('livePitch');
+    const elLastYaw = document.getElementById('lastYaw');
+    const elLastPitch = document.getElementById('lastPitch');
+
+    function loadPanorama(imageUrl) {
+      if (viewer) {
+        viewer.destroy();
+        viewer = null;
+      }
+
+      viewer = pannellum.viewer('panorama', {
+        type: 'equirectangular',
+        panorama: imageUrl,
+        autoLoad: true,
+        showControls: true,
+        showFullscreenCtrl: true,
+        hfov: 100,
+        minHfov: 50,
+        maxHfov: 120,
+        mouseZoom: true,
+      });
+
+      viewer.on('mousedown', () => {
+        // Pannellum no expone un evento click directo con coords del puntero,
+        // así que escuchamos en el contenedor y usamos viewer.mouseEventToCoords.
+      });
+
+      const container = document.getElementById('panorama');
+
+      container.addEventListener('mousemove', (event) => {
+        if (!viewer || !viewer.isLoaded()) return;
+        const coords = viewer.mouseEventToCoords(event);
+        if (!coords) return;
+        elLivePitch.textContent = coords[0].toFixed(2);
+        elLiveYaw.textContent = coords[1].toFixed(2);
+      });
+
+      container.addEventListener('click', (event) => {
+        if (!viewer || !viewer.isLoaded()) return;
+        const coords = viewer.mouseEventToCoords(event);
+        if (!coords) return;
+        addPick(coords[1], coords[0]); // yaw, pitch
+      });
+    }
+
+    function addPick(yaw, pitch) {
+      picks.push({ yaw, pitch });
+      elLastYaw.textContent = yaw.toFixed(2);
+      elLastPitch.textContent = pitch.toFixed(2);
+      renderPicks();
+    }
+
+    function renderPicks() {
+      elEmpty.style.display = picks.length === 0 ? 'block' : 'none';
+      elPicks.querySelectorAll('.pick').forEach((n) => n.remove());
+
+      picks.forEach((pick, index) => {
+        const row = document.createElement('div');
+        row.className = 'pick';
+
+        const num = document.createElement('div');
+        num.className = 'num';
+        num.textContent = String(index + 1);
+
+        const coords = document.createElement('div');
+        coords.className = 'coords';
+        coords.innerHTML = `yaw <b>${pick.yaw.toFixed(2)}</b> · pitch <b>${pick.pitch.toFixed(2)}</b>`;
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy';
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'copiar';
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(`yaw=${pick.yaw.toFixed(2)}, pitch=${pick.pitch.toFixed(2)}`);
+          copyBtn.textContent = '✓';
+          setTimeout(() => (copyBtn.textContent = 'copiar'), 1200);
+        });
+
+        row.appendChild(num);
+        row.appendChild(coords);
+        row.appendChild(copyBtn);
+        elPicks.appendChild(row);
+      });
+    }
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      picks.length = 0;
+      renderPicks();
+    });
+
+    document.getElementById('copyAllBtn').addEventListener('click', () => {
+      if (picks.length === 0) return;
+      const text = picks
+        .map((p, i) => `${i + 1}. yaw=${p.yaw.toFixed(2)}, pitch=${p.pitch.toFixed(2)}`)
+        .join('\n');
+      navigator.clipboard.writeText(text);
+    });
+
+    document.getElementById('urlForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const url = document.getElementById('urlInput').value.trim();
+      const file = document.getElementById('fileInput').files[0];
+      if (file) {
+        const objectUrl = URL.createObjectURL(file);
+        loadPanorama(objectUrl);
+        return;
+      }
+      if (url) loadPanorama(url);
+    });
+
+    // Carga inicial: si hay un parámetro ?src=... lo usa.
+    const params = new URLSearchParams(location.search);
+    const initialSrc = params.get('src');
+    if (initialSrc) {
+      document.getElementById('urlInput').value = initialSrc;
+      loadPanorama(initialSrc);
+    }
+  </script>
+</body>
+</html>

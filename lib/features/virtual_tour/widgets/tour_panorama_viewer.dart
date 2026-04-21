@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:panorama_viewer/panorama_viewer.dart';
 
 import '../../../data/virtual_tour_demo.dart';
 
-class TourPanoramaViewer extends StatelessWidget {
+class TourPanoramaViewer extends StatefulWidget {
   const TourPanoramaViewer({
     super.key,
     required this.scene,
@@ -18,8 +20,12 @@ class TourPanoramaViewer extends StatelessWidget {
   static const double maxZoom = 2.6;
   static const double minLatitude = -55;
   static const double maxLatitude = 55;
-  static const int latSegments = 64;
-  static const int lonSegments = 128;
+  static const int latSegments = 32;
+  static const int lonSegments = 64;
+
+  static const double _infoDotSize = 14;
+  static const double _navDotSize = 44;
+  static const double _hotspotBoxSize = 160;
 
   final VirtualTourScene scene;
   final bool gyroscopeEnabled;
@@ -28,162 +34,190 @@ class TourPanoramaViewer extends StatelessWidget {
   final ValueChanged<VirtualTourArtwork> onSelectArtwork;
 
   @override
+  State<TourPanoramaViewer> createState() => _TourPanoramaViewerState();
+}
+
+class _TourPanoramaViewerState extends State<TourPanoramaViewer> {
+  static const Duration _labelAutoDismiss = Duration(seconds: 4);
+
+  String? _expandedHotspotId;
+  Timer? _dismissTimer;
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  void _expand(String id) {
+    _dismissTimer?.cancel();
+    setState(() => _expandedHotspotId = id);
+    _dismissTimer = Timer(_labelAutoDismiss, _collapse);
+  }
+
+  void _collapse() {
+    if (!mounted) return;
+    _dismissTimer?.cancel();
+    if (_expandedHotspotId == null) return;
+    setState(() => _expandedHotspotId = null);
+  }
+
+  void _handleHotspotTap(VirtualTourHotspot hotspot) {
+    if (hotspot.kind == VirtualTourHotspotKind.navigation) {
+      widget.onNavigateToScene(hotspot.targetSceneId!);
+      return;
+    }
+
+    if (_expandedHotspotId == hotspot.id) {
+      _collapse();
+      widget.onSelectArtwork(hotspot.artwork!);
+      return;
+    }
+
+    _expand(hotspot.id);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PanoramaViewer(
-      key: ValueKey<String>(scene.id),
-      longitude: scene.initialLongitude,
-      latitude: scene.initialLatitude,
-      minLatitude: minLatitude,
-      maxLatitude: maxLatitude,
-      zoom: initialZoom,
-      minZoom: minZoom,
-      maxZoom: maxZoom,
-      latSegments: latSegments,
-      lonSegments: lonSegments,
+      key: ValueKey<String>(widget.scene.id),
+      longitude: widget.scene.initialLongitude,
+      latitude: widget.scene.initialLatitude,
+      minLatitude: TourPanoramaViewer.minLatitude,
+      maxLatitude: TourPanoramaViewer.maxLatitude,
+      zoom: TourPanoramaViewer.initialZoom,
+      minZoom: TourPanoramaViewer.minZoom,
+      maxZoom: TourPanoramaViewer.maxZoom,
+      latSegments: TourPanoramaViewer.latSegments,
+      lonSegments: TourPanoramaViewer.lonSegments,
       sensitivity: 1.3,
-      sensorControl: gyroscopeEnabled
+      sensorControl: widget.gyroscopeEnabled
           ? SensorControl.orientation
           : SensorControl.none,
-      hotspots: scene.hotspots.map(_buildHotspot).toList(growable: false),
+      onTap: (double _, double _, double _) => _collapse(),
+      hotspots: widget.scene.hotspots.map(_buildHotspot).toList(growable: false),
       child: _buildPanoramaImage(),
     );
   }
 
   Image _buildPanoramaImage() {
-    final url = scene.panoramaUrl;
+    final url = widget.scene.panoramaUrl;
     if (url != null && url.isNotEmpty) {
       return Image.network(url, fit: BoxFit.cover, gaplessPlayback: true);
     }
-    return Image.asset(scene.assetPath, fit: BoxFit.cover);
+    return Image.asset(widget.scene.assetPath, fit: BoxFit.cover);
   }
 
   Hotspot _buildHotspot(VirtualTourHotspot hotspot) {
+    final bool isInfo = hotspot.kind == VirtualTourHotspotKind.info;
+    final bool labelVisible = isInfo
+        ? _expandedHotspotId == hotspot.id
+        : widget.showHotspotHints;
+
     return Hotspot(
       latitude: hotspot.latitude,
       longitude: hotspot.longitude,
-      width: hotspot.kind == VirtualTourHotspotKind.navigation ? 170 : 200,
-      height: hotspot.kind == VirtualTourHotspotKind.navigation ? 150 : 188,
+      width: TourPanoramaViewer._hotspotBoxSize,
+      height: TourPanoramaViewer._hotspotBoxSize,
       widget: _TourHotspot(
         hotspot: hotspot,
-        showLabel: showHotspotHints,
-        onTap: () {
-          if (hotspot.kind == VirtualTourHotspotKind.navigation) {
-            onNavigateToScene(hotspot.targetSceneId!);
-            return;
-          }
-
-          onSelectArtwork(hotspot.artwork!);
-        },
+        labelVisible: labelVisible,
+        boxSize: TourPanoramaViewer._hotspotBoxSize,
+        dotSize: isInfo
+            ? TourPanoramaViewer._infoDotSize
+            : TourPanoramaViewer._navDotSize,
+        onTap: () => _handleHotspotTap(hotspot),
       ),
     );
   }
 }
 
-class _TourHotspot extends StatefulWidget {
+class _TourHotspot extends StatelessWidget {
   const _TourHotspot({
     required this.hotspot,
-    required this.showLabel,
+    required this.labelVisible,
+    required this.boxSize,
+    required this.dotSize,
     required this.onTap,
   });
 
   final VirtualTourHotspot hotspot;
-  final bool showLabel;
+  final bool labelVisible;
+  final double boxSize;
+  final double dotSize;
   final VoidCallback onTap;
 
   @override
-  State<_TourHotspot> createState() => _TourHotspotState();
-}
-
-class _TourHotspotState extends State<_TourHotspot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _pulse;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 980),
-    )..repeat(reverse: true);
-    _pulse = Tween<double>(
-      begin: 0.92,
-      end: 1.08,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final hotspot = widget.hotspot;
+    final bool isInfo = hotspot.kind == VirtualTourHotspotKind.info;
+
+    final Widget circle = Container(
+      width: dotSize,
+      height: dotSize,
+      decoration: BoxDecoration(
+        color: hotspot.tint.withAlpha(235),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white.withAlpha(219),
+          width: isInfo ? 2 : 2.4,
+        ),
+      ),
+      child: isInfo
+          ? null
+          : Icon(
+              Icons.place_rounded,
+              color: Colors.white,
+              size: dotSize * 0.55,
+            ),
+    );
+
+    final double labelTop = boxSize / 2 + dotSize / 2 + 8;
 
     return GestureDetector(
       key: ValueKey<String>('tour_hotspot_${hotspot.id}'),
-      onTap: widget.onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      behavior: HitTestBehavior.translucent,
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: <Widget>[
-          ScaleTransition(
-            scale: _pulse,
-            child: Container(
-              width: hotspot.kind == VirtualTourHotspotKind.navigation
-                  ? 54
-                  : 58,
-              height: hotspot.kind == VirtualTourHotspotKind.navigation
-                  ? 54
-                  : 58,
-              decoration: BoxDecoration(
-                color: hotspot.tint.withAlpha((0.92 * 255).round()),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withAlpha((0.86 * 255).round()),
-                  width: 2.6,
-                ),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: hotspot.tint.withAlpha((0.40 * 255).round()),
-                    blurRadius: 24,
-                    spreadRadius: 8,
-                  ),
-                ],
-              ),
-              child: Icon(
-                hotspot.kind == VirtualTourHotspotKind.navigation
-                    ? Icons.place_rounded
-                    : Icons.info_outline_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          ),
-          if (widget.showLabel) ...<Widget>[
-            const SizedBox(height: 8),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.black.withAlpha((0.64 * 255).round()),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                child: Text(
-                  hotspot.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
+          Positioned.fill(child: Center(child: circle)),
+          if (labelVisible)
+            Positioned(
+              top: labelTop,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(184),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withAlpha(46),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      child: Text(
+                        hotspot.label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ],
         ],
       ),
     );

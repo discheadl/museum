@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class MuseumTheme {
-  static const Color _seed = Color(0xFF7F5539); // madera/arcilla
-  static const Color _paper = Color(0xFFF3EEE6); // papel
-  static const Color _ink = Color(0xFF1F1B16); // tinta
+  static const Color _seed = Color(0xFF7F5539);
+  static const Color _paper = Color(0xFFF3EEE6);
+  static const Color _ink = Color(0xFF1F1B16);
 
   static ThemeData light() {
     final colorScheme = ColorScheme.fromSeed(
