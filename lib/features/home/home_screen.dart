@@ -26,9 +26,9 @@ class HomeScreen extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          // Imagen estática de fondo, imagen por definir
+          // Imagen estática de fondo (imagen provisional)
           Image.asset(
-            'assets/images/museum_hero.jpg',
+            'assets/images/museo.jpg',
             fit: BoxFit.cover,
           ),
 
