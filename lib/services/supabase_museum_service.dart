@@ -7,8 +7,6 @@ import 'package:http/http.dart' as http;
 import '../models/museum_models.dart';
 import 'museum_repository.dart';
 
-/// Repositorio que consume las tablas `salas` y `exhibiciones` de Supabase
-/// directamente via la API REST publica (PostgREST).
 class SupabaseMuseumService implements MuseumRepository {
   static const String _dartDefineUrl = String.fromEnvironment('SUPABASE_URL');
   static const String _dartDefineKey = String.fromEnvironment(
@@ -46,8 +44,8 @@ class SupabaseMuseumService implements MuseumRepository {
   Future<List<MuseumRoom>> fetchRooms() async {
     final uri = Uri.parse(
       '$_url/rest/v1/salas'
-      '?select=id,nombre,descripcion,imagen_url,orden,'
-      'exhibiciones(id,titulo,descripcion,imagen_url,orden)'
+      '?select=id,nombre,descripcion,imagen_url,orden,yaw,pitch,'
+      'exhibiciones(id,titulo,descripcion,imagen_url,orden,yaw,pitch)'
       '&order=orden.asc',
     );
 
@@ -112,6 +110,8 @@ class SupabaseMuseumService implements MuseumRepository {
       accent: _defaultAccent,
       coverUrl: imagen,
       exhibits: rawExhibits.map(_mapExhibit).toList(growable: false),
+      yaw: (json['yaw'] as num?)?.toDouble(),
+      pitch: (json['pitch'] as num?)?.toDouble(),
     );
   }
 
@@ -126,6 +126,8 @@ class SupabaseMuseumService implements MuseumRepository {
       mediaType: MuseumMediaType.image,
       mediaUrl: imagen,
       thumbnailUrl: imagen,
+      yaw: (json['yaw'] as num?)?.toDouble(),
+      pitch: (json['pitch'] as num?)?.toDouble(),
     );
   }
 }
