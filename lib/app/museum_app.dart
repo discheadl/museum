@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../features/home/home_screen.dart';
-import '../features/virtual_tour/virtual_tour_screen.dart';
 import '../services/museum_repository.dart';
 import '../services/supabase_museum_service.dart';
 import 'museum_theme.dart';
@@ -19,7 +18,7 @@ class MuseumApp extends StatelessWidget {
       title: 'Museo',
       debugShowCheckedModeBanner: false,
       theme: MuseumTheme.light(),
-      home: homeOverride ?? VirtualTourScreen(repository: repository),
+      home: homeOverride ?? HomeScreen(repository: repository),
       routes: <String, WidgetBuilder>{
         HomeScreen.routeName: (_) => HomeScreen(repository: repository),
       },
