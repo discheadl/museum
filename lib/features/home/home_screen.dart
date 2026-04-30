@@ -23,62 +23,65 @@ class HomeScreen extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
 
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          // Imagen estática de fondo (imagen provisional)
-          Image.asset(
-            'assets/images/museo.jpg',
-            fit: BoxFit.cover,
-          ),
+      body: GestureDetector(
+        onTap: () => _startApp(context),
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            // Imagen estática de fondo (imagen provisional)
+            Image.asset(
+              'assets/images/museo.jpg',
+              fit: BoxFit.cover,
+            ),
 
-          // Contenido centrado
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Bienvenido al\nMuseo Virtual',
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Explora nuestra colección\ny recorre las salas en 360°.',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withAlpha((0.85 * 255).round()),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () => _startApp(context),
-                      icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                      label: const Text(
-                        'Iniciar recorrido',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black87,
+            // Contenido centrado
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Bienvenido al\nMuseo Virtual',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 48),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'Explora nuestra colección\ny recorre las salas en 360°.',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: Colors.white.withAlpha((0.85 * 255).round()),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: <Widget>[
+                        const Icon(
+                          Icons.touch_app_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Toca cualquier parte\nde la pantalla para entrar',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withAlpha((0.75 * 255).round()),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 48),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      )
     );
   }
 }
