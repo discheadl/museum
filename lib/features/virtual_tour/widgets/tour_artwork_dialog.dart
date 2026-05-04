@@ -1,16 +1,17 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../data/virtual_tour_demo.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../services/museum_cache_manager.dart';
+import '../../../widgets/museum_skeleton.dart';
 
 class TourArtworkDialog extends StatelessWidget {
   const TourArtworkDialog({super.key, required this.artwork});
 
   final VirtualTourArtwork artwork;
 
-  static Future<void> _openFullscreen(
-    BuildContext context,
-    String imagePath,
-  ) {
+  static Future<void> _openFullscreen(BuildContext context, String imagePath) {
     return Navigator.of(context).push(
       PageRouteBuilder<void>(
         opaque: false,
@@ -23,13 +24,26 @@ class TourArtworkDialog extends StatelessWidget {
     );
   }
 
-  static List<Widget> _metaChips(VirtualTourArtwork artwork) {
+  static List<Widget> _metaChipsWithLabels(
+    VirtualTourArtwork artwork,
+    AppLocalizations localizations,
+  ) {
     final chips = <Widget>[];
     if (artwork.author.isNotEmpty) {
-      chips.add(_MetaChip(label: 'Autor', value: artwork.author));
+      chips.add(
+        _MetaChip(
+          label: localizations.text('artwork.authorLabel'),
+          value: artwork.author,
+        ),
+      );
     }
     if (artwork.dateLabel.isNotEmpty) {
-      chips.add(_MetaChip(label: 'Fecha', value: artwork.dateLabel));
+      chips.add(
+        _MetaChip(
+          label: localizations.text('artwork.dateLabel'),
+          value: artwork.dateLabel,
+        ),
+      );
     }
     return chips;
   }
@@ -37,9 +51,10 @@ class TourArtworkDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final AppLocalizations localizations = AppLocalizations.of(context);
+    final List<Widget> metaChips = _metaChipsWithLabels(artwork, localizations);
 
-    final double maxHeight =
-        MediaQuery.of(context).size.height - 60;
+    final double maxHeight = MediaQuery.of(context).size.height - 60;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -58,11 +73,13 @@ class TourArtworkDialog extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   flex: 5,
-                  child: GestureDetector(
-                    onTap: () => _openFullscreen(context, artwork.imagePath),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
-                      child: _ArtworkImage(imagePath: artwork.imagePath),
+                  child: RepaintBoundary(
+                    child: GestureDetector(
+                      onTap: () => _openFullscreen(context, artwork.imagePath),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: _ArtworkImage(imagePath: artwork.imagePath),
+                      ),
                     ),
                   ),
                 ),
@@ -97,13 +114,9 @@ class TourArtworkDialog extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                      if (_metaChips(artwork).isNotEmpty) ...<Widget>[
+                      if (metaChips.isNotEmpty) ...<Widget>[
                         const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: _metaChips(artwork),
-                        ),
+                        Wrap(spacing: 10, runSpacing: 10, children: metaChips),
                       ],
                       const SizedBox(height: 16),
                       Expanded(
@@ -124,14 +137,11 @@ class TourArtworkDialog extends StatelessWidget {
                                   const SizedBox(height: 14),
                                   Text(
                                     artwork.context,
-                                    style: theme.textTheme.bodyMedium
-                                        ?.copyWith(
-                                          color: theme.colorScheme.onSurface
-                                              .withAlpha(
-                                                (0.74 * 255).round(),
-                                              ),
-                                          height: 1.35,
-                                        ),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurface
+                                          .withAlpha((0.74 * 255).round()),
+                                      height: 1.35,
+                                    ),
                                   ),
                                 ],
                               ],
@@ -160,17 +170,22 @@ class _ArtworkImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (imagePath.startsWith('http')) {
-      return Image.network(
-        imagePath,
+      return CachedNetworkImage(
+        imageUrl: imagePath,
+        cacheManager: MuseumCacheManager.instance,
         fit: fit,
-        errorBuilder:
-            (BuildContext context, Object error, StackTrace? stackTrace) =>
-                const ColoredBox(
-                  color: Color(0xFFE8DCCA),
-                  child: Center(
-                    child: Icon(Icons.image_not_supported_outlined),
-                  ),
-                ),
+        placeholder: (BuildContext context, String url) => const MuseumSkeleton(
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: BorderRadius.zero,
+          baseColor: Color(0xFFE8DCCA),
+          highlightColor: Color(0xFFF3E9DA),
+        ),
+        errorWidget: (BuildContext context, String url, Object error) =>
+            const ColoredBox(
+              color: Color(0xFFE8DCCA),
+              child: Center(child: Icon(Icons.image_not_supported_outlined)),
+            ),
       );
     }
 

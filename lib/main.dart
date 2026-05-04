@@ -7,11 +7,12 @@ import 'app/museum_app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: '.env');
-
-  await SystemChrome.setPreferredOrientations(const <DeviceOrientation>[
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
+  await Future.wait<void>(<Future<void>>[
+    dotenv.load(fileName: '.env'),
+    SystemChrome.setPreferredOrientations(const <DeviceOrientation>[
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]),
   ]);
 
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

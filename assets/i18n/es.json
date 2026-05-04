@@ -1,0 +1,108 @@
+{
+  "actions": {
+    "retry": "Reintentar"
+  },
+  "audio": {
+    "play": "Reproducir audio",
+    "pause": "Pausar audio"
+  },
+  "artwork": {
+    "authorLabel": "Autor",
+    "dateLabel": "Fecha"
+  },
+  "errors": {
+    "unableToLoadTour": "No fue posible cargar el recorrido desde Supabase.",
+    "genericLoadFailure": "Ocurrió un error al cargar el recorrido.",
+    "roomListEmpty": "Supabase no devolvió salas disponibles para el recorrido.",
+    "roomPanoramaMissing": "Las salas disponibles no tienen panoramas configurados.",
+    "supabaseMissingCredentials": "Faltan credenciales de Supabase en la configuración del proyecto.",
+    "supabaseUnexpectedStatus": "Supabase respondió con un estado inesperado.",
+    "supabaseInvalidResponse": "La respuesta de Supabase no tiene el formato esperado."
+  },
+  "home": {
+    "title": "Bienvenido al\nMuseo Virtual",
+    "subtitle": "Explora nuestra colección\ny recorre las salas en 360°.",
+    "cta": "Toca cualquier parte\nde la pantalla para continuar",
+    "preparingData": "Se está preparando la aplicación y cargando el recorrido virtual...",
+    "preparingAssets": "Se están preparando imágenes, textos y audios del recorrido...",
+    "prepareError": "No fue posible preparar la aplicación."
+  },
+  "tour": {
+    "currentLocation": "UBICACIÓN ACTUAL",
+    "goToRoom": "Ir a {title}",
+    "hideLanguageMenu": "Ocultar idiomas",
+    "previousSpace": "Espacio anterior",
+    "nextSpace": "Espacio siguiente",
+    "hideNavigationControls": "Ocultar controles de navegación",
+    "showLanguageMenu": "Mostrar idiomas",
+    "showNavigationControls": "Mostrar controles de navegación"
+  },
+  "rooms": {
+    "1aeb729b-dfe1-4225-adcf-16a82bf274db": {
+      "title": "Exterior",
+      "subtitle": "Área exterior del museo"
+    },
+    "cc71f147-1d76-420a-a7ce-918437b38ebe": {
+      "title": "Sala principal",
+      "subtitle": "Sala principal del museo"
+    }
+  },
+  "exhibits": {
+    "51d08c5d-9987-4cc4-af2b-936a27630f1e": {
+      "title": "Colegio Vocacional y Profesional Montemorelos",
+      "description": "La Asociación Civil Filantrópica y Educativa, en su afán por realizar la noble labor de educar a la juventud mexicana y orientarla en un sentido especial dentro de una educación activa y acorde al progreso, tomó el voto el 26 de marzo de 1951 de cambiar el nombre de Escuela Agrícola Industrial Mexicana por el de Colegio Vocacional y Profesional Montemorelos. De esta manera, en el curso escolar 1951-1952, la institución iniciaría una nueva etapa con las siglas Covoprom, bajo la dirección del profesor Horacio Hernández Aguirre.\nEl deseo de los dirigentes de la institución fue ampliar el nivel académico y adecuarlo a los desafíos de la educación de la época, para hacerlo más atractivo y brindar mejores oportunidades a las nuevas generaciones.\nLa institución, siguiendo el principio de: \"La verdadera educación significa más que la prosecución de un determinado curso de estudios. Es el desarrollo armonioso de las facultades físicas, mentales y espirituales\", amplió sus industrias para que el alumno pudiera estudiar para sufragar sus gastos mientras aprendía una vocación útil."
+    },
+    "1f858962-64e1-4500-844d-4d7817b04c90": {
+      "title": "Hacienda La Carlota",
+      "description": "Las haciendas en México fueron mercedes de tierra que la corona española otorgaba a sus soldados de muy alto rango. Esta fue la propiedad rural más característica del México novohispano.\nLa hacienda \"La Carlota\" se ubica en el kilómetro 906 de la carretera nacional México-Laredo. Perteneció al señor José A. Robertson, abogado, periodista e industrial, quien fundó en 1895 el periódico \"The Monterrey News\" y era dueño del ingenio azucarero \"La Carlota\". La vendió al señor Wilheln Werdenhoff en 1912, quien posteriormente la heredó a su esposa Ana K. S. Skjordal y a sus hijos Frank Robert y James Henric Werdenhoff. Más adelante, la hacienda fue adquirida por Carlos Jaime Dávila, quien a su vez la vendió a la Asociación Civil Filantrópica y Educativa.\nEn esos años, en los predios de la hacienda se cultivaba caña de azúcar y se producía piloncillo; de hecho, cuando se compró la hacienda, había una molienda. Las construcciones estaban al lado de un ramal de la acequia principal, es decir, donde hoy se encuentra el edificio de la finca, parte del edificio antiguo aunque ya remodelado. También el departamento de Mantenimiento con sus nuevas construcciones pertenecía a ese edificio. En la misma dirección, a un lado, estaba la casa que habitaban los dueños de la hacienda."
+    },
+    "efb3bf5c-5b1c-4a55-8b0b-d1cebb04e40b": {
+      "title": "Instituto Bíblico",
+      "description": "Descripción pendiente."
+    },
+    "9386243b-b72d-4d27-8315-bb0d0cef5e09": {
+      "title": "Dormitorio",
+      "description": "Descripción pendiente."
+    },
+    "eaf20e19-6f92-416a-83bd-44d6ab539fc8": {
+      "title": "Escuela Agrícola Industrial Mexicana",
+      "description": "La Escuela Agrícola e Industrial Mexicana, fundada en el año de 1942, fue establecida con el noble propósito de educar a la juventud mexicana en todos los ramos de la educación general y además orientarla, en un sentido especial, en las actividades prácticas de la agricultura y en varios oficios e industrias. Para cumplir con esta noble misión, la escuela rodea al alumno de un ambiente de estudio y de trabajo, con la finalidad de que adquiera un concepto correcto de la vida.\nEs el propósito de la naciente institución ayudar a la juventud en el logro de una norma alta. Esta servirá como fundamento firme sobre el cual edifique un carácter verdadero."
+    },
+    "8c65af5f-a96b-4b21-b5d5-e22f4a9def4b": {
+      "title": "Clase Secundaria 1995",
+      "description": "Descripción pendiente."
+    },
+    "1b3ce9b1-0f8f-46a4-88ea-026e58e56e54": {
+      "title": "Testimonio de Gratitud y Reconocimiento",
+      "description": "Descripción pendiente."
+    },
+    "86cff256-37f4-4a48-84e5-993de045165a": {
+      "title": "Universidad de Montemorelos",
+      "description": "Descripción pendiente."
+    },
+    "c606ece4-bfa3-4aa1-875b-25c5e2e52033": {
+      "title": "Internado de Misioneros",
+      "description": "Descripción pendiente."
+    },
+    "8a69ca34-6790-4625-b9f4-b14575297213": {
+      "title": "Finca",
+      "description": "Descripción pendiente."
+    },
+    "77806a18-9073-4717-9012-1fa37d4820d6": {
+      "title": "Jóvenes trabajando en la finca",
+      "description": "Descripción pendiente."
+    },
+    "89fc3510-71db-4d0f-b6e8-d0df55395f18": {
+      "title": "Jóvenes trabajando en la finca",
+      "description": "Descripción pendiente."
+    },
+    "57e4f0d4-b902-48ec-9729-38283cd56bbb": {
+      "title": "Taller",
+      "description": "Descripción pendiente."
+    },
+    "fa622ac9-461f-4eba-b1db-03d8ab209267": {
+      "title": "Instituto Comercial de Prosperidad",
+      "description": "Los primeros misioneros adventistas que llegaron a México se establecieron en Guadalajara, Jalisco, en 1894, donde comenzó la estación misionera con Dante Jones y la maestra Ora Osborne.\nEllos trajeron el concepto cristiano de una educación integral de la mente, la mano y el corazón como medio para fortalecer la fe de las familias y preparar a los jóvenes para servir a la iglesia y a la sociedad.\nEn 1910, durante la administración de George W. Caviness, se reactivó la educación adventista en la Ciudad de México, trayendo a W. A. Yatnell para unirse a Waldo Miramontes con la finalidad de concretar los planes de establecer un colegio que preparara a jóvenes nacionales para ser misioneros.\nEn 1931, el misionero E. J. Lorns, superintendente de la Unión Mexicana, llamó al maestro H. F. House para ser el director del departamento de Educación de la iglesia adventista en México. Se consideraron varias opciones de lugares para establecer el centro educativo que se necesitaba. En 1935, siendo superintendente de la iglesia C. E. Word, se consolidó el plan de educación adventista que comenzó con internado en la Ciudad de México, ubicado en la calle Prosperidad No. 85, colonia Escandón.\nSe habilitó un pequeño edificio que se llamó \"Instituto Comercial Prosperidad\", siendo director el profesor Alfred G. Parfitt. Se inició con un grupo de 12 jóvenes que llegaron de varios estados; estos alumnos se graduaron en 1939 y salieron al campo de labor. Para 1941 aumentó el número de estudiantes y el lugar no permitió su ampliación. Los dirigentes de la Unión con sede en la ciudad de Monterrey, bajo la administración de House, decidieron su traslado a Montemorelos, Nuevo León."
+    }
+  }
+}

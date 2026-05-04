@@ -1,0 +1,108 @@
+{
+  "actions": {
+    "retry": "Réessayer"
+  },
+  "audio": {
+    "play": "Lire l'audio",
+    "pause": "Mettre l'audio en pause"
+  },
+  "artwork": {
+    "authorLabel": "Auteur",
+    "dateLabel": "Date"
+  },
+  "errors": {
+    "unableToLoadTour": "Impossible de charger la visite depuis Supabase.",
+    "genericLoadFailure": "Une erreur est survenue lors du chargement de la visite.",
+    "roomListEmpty": "Supabase n'a renvoyé aucune salle pour la visite virtuelle.",
+    "roomPanoramaMissing": "Les salles disponibles n'ont pas de panoramas configurés.",
+    "supabaseMissingCredentials": "Les identifiants Supabase sont absents de la configuration du projet.",
+    "supabaseUnexpectedStatus": "Supabase a renvoyé un statut inattendu.",
+    "supabaseInvalidResponse": "Le format de la réponse Supabase est invalide."
+  },
+  "home": {
+    "title": "Bienvenue au\nMusée Virtuel",
+    "subtitle": "Explorez notre collection\net parcourez les salles en 360°.",
+    "cta": "Touchez n'importe quelle zone\nde l'écran pour continuer",
+    "preparingData": "L'application se prépare et la visite virtuelle se charge...",
+    "preparingAssets": "Les images, textes et pistes audio de la visite se préparent...",
+    "prepareError": "Impossible de préparer l'application."
+  },
+  "tour": {
+    "currentLocation": "EMPLACEMENT ACTUEL",
+    "goToRoom": "Aller à {title}",
+    "hideLanguageMenu": "Masquer les langues",
+    "previousSpace": "Espace précédent",
+    "nextSpace": "Espace suivant",
+    "hideNavigationControls": "Masquer les contrôles de navigation",
+    "showLanguageMenu": "Afficher les langues",
+    "showNavigationControls": "Afficher les contrôles de navigation"
+  },
+  "rooms": {
+    "1aeb729b-dfe1-4225-adcf-16a82bf274db": {
+      "title": "Extérieur",
+      "subtitle": "Zone extérieure du musée"
+    },
+    "cc71f147-1d76-420a-a7ce-918437b38ebe": {
+      "title": "Salle principale",
+      "subtitle": "Salle principale du musée"
+    }
+  },
+  "exhibits": {
+    "51d08c5d-9987-4cc4-af2b-936a27630f1e": {
+      "title": "Collège professionnel et vocationnel de Montemorelos",
+      "description": "L'Association civile philanthropique et éducative, dans son effort pour accomplir la noble tâche d'éduquer la jeunesse mexicaine et de l'orienter dans un sens particulier au moyen d'une éducation active et en accord avec le progrès, a voté le 26 mars 1951 le changement du nom de l'École agricole et industrielle mexicaine en Collège professionnel et vocationnel de Montemorelos. Ainsi, pendant l'année scolaire 1951-1952, l'institution a entamé une nouvelle étape sous l'acronyme Covoprom, sous la direction du professeur Horacio Hernández Aguirre.\nLe souhait des dirigeants était d'élargir le niveau académique et de l'adapter aux défis éducatifs de l'époque, afin de le rendre plus attrayant et d'offrir de meilleures opportunités aux nouvelles générations.\nFidèle au principe selon lequel « la véritable éducation signifie plus que la poursuite d'un programme d'études déterminé. C'est le développement harmonieux des facultés physiques, mentales et spirituelles », l'institution a développé ses ateliers afin que l'élève puisse étudier, subvenir à ses dépenses et apprendre en même temps une vocation utile."
+    },
+    "1f858962-64e1-4500-844d-4d7817b04c90": {
+      "title": "Hacienda La Carlota",
+      "description": "Au Mexique, les haciendas étaient des concessions de terres que la couronne espagnole accordait à ses soldats de très haut rang. Elles sont devenues la propriété rurale la plus caractéristique du Mexique colonial.\nL'hacienda « La Carlota » se situe au kilomètre 906 de la route nationale Mexico-Laredo. Elle appartenait à José A. Robertson, avocat, journaliste et industriel, fondateur en 1895 du journal « The Monterrey News » et propriétaire du moulin à sucre « La Carlota ». Il la vendit à Wilheln Werdenhoff en 1912, qui la transmit ensuite à son épouse Ana K. S. Skjordal et à leurs fils Frank Robert et James Henric Werdenhoff. Plus tard, l'hacienda fut acquise par Carlos Jaime Dávila, qui la vendit à l'Association civile philanthropique et éducative.\nÀ cette époque, on cultivait la canne à sucre sur ses terres et on y produisait du sucre brut ; d'ailleurs, lorsque l'hacienda fut achetée, le moulin fonctionnait encore. Les constructions se trouvaient à côté d'une dérivation du canal principal, à l'endroit où se situe aujourd'hui le bâtiment de la propriété, qui fait partie de l'ancien édifice bien qu'il ait été remanié. Le service de maintenance, avec ses nouvelles constructions, appartenait également à cet ensemble. Dans la même direction, juste à côté, se trouvait la maison habitée par les propriétaires de l'hacienda."
+    },
+    "efb3bf5c-5b1c-4a55-8b0b-d1cebb04e40b": {
+      "title": "Institut biblique",
+      "description": "Description à venir."
+    },
+    "9386243b-b72d-4d27-8315-bb0d0cef5e09": {
+      "title": "Dortoir",
+      "description": "Description à venir."
+    },
+    "eaf20e19-6f92-416a-83bd-44d6ab539fc8": {
+      "title": "École agricole et industrielle mexicaine",
+      "description": "L'École agricole et industrielle mexicaine, fondée en 1942, a été créée dans le noble but d'éduquer la jeunesse mexicaine dans tous les domaines de l'enseignement général et, en outre, de l'orienter de manière particulière vers les activités pratiques de l'agriculture ainsi que vers divers métiers et industries. Pour accomplir cette mission, l'école entoure l'élève d'un environnement d'étude et de travail afin qu'il acquière une conception juste de la vie.\nLe but de cette institution naissante était d'aider la jeunesse à atteindre un idéal élevé. Cet idéal devait servir de fondement solide sur lequel construire un caractère véritable."
+    },
+    "8c65af5f-a96b-4b21-b5d5-e22f4a9def4b": {
+      "title": "Promotion du secondaire 1995",
+      "description": "Description à venir."
+    },
+    "1b3ce9b1-0f8f-46a4-88ea-026e58e56e54": {
+      "title": "Témoignage de gratitude et de reconnaissance",
+      "description": "Description à venir."
+    },
+    "86cff256-37f4-4a48-84e5-993de045165a": {
+      "title": "Université de Montemorelos",
+      "description": "Description à venir."
+    },
+    "c606ece4-bfa3-4aa1-875b-25c5e2e52033": {
+      "title": "Internat missionnaire",
+      "description": "Description à venir."
+    },
+    "8a69ca34-6790-4625-b9f4-b14575297213": {
+      "title": "Domaine",
+      "description": "Description à venir."
+    },
+    "77806a18-9073-4717-9012-1fa37d4820d6": {
+      "title": "Jeunes travaillant dans le domaine",
+      "description": "Description à venir."
+    },
+    "89fc3510-71db-4d0f-b6e8-d0df55395f18": {
+      "title": "Jeunes travaillant dans le domaine",
+      "description": "Description à venir."
+    },
+    "57e4f0d4-b902-48ec-9729-38283cd56bbb": {
+      "title": "Atelier",
+      "description": "Description à venir."
+    },
+    "fa622ac9-461f-4eba-b1db-03d8ab209267": {
+      "title": "Institut commercial Prosperidad",
+      "description": "Les premiers missionnaires adventistes arrivés au Mexique se sont installés à Guadalajara, dans l'État de Jalisco, en 1894, où la station missionnaire a commencé avec Dante Jones et l'enseignante Ora Osborne.\nIls ont apporté le concept chrétien d'une éducation intégrale de l'esprit, de la main et du cœur comme moyen de fortifier la foi des familles et de préparer les jeunes à servir l'Église et la société.\nEn 1910, sous l'administration de George W. Caviness, l'éducation adventiste fut relancée à Mexico en faisant venir W. A. Yatnell pour travailler avec Waldo Miramontes à l'établissement d'un collège destiné à former de jeunes Mexicains pour le service missionnaire.\nEn 1931, le missionnaire E. J. Lorns, surintendant de l'Union mexicaine, invita l'enseignant H. F. House à diriger le département de l'Éducation de l'Église adventiste au Mexique. Plusieurs lieux furent envisagés pour établir le centre éducatif nécessaire. En 1935, alors que C. E. Word était surintendant de l'Église, le projet éducatif adventiste se consolida avec un internat à Mexico, situé au 85 de la rue Prosperidad, dans le quartier Escandón.\nUn petit bâtiment fut aménagé et prit le nom d'« Institut commercial Prosperidad », avec le professeur Alfred G. Parfitt comme directeur. L'établissement commença avec un groupe de 12 jeunes venus de plusieurs États ; ils furent diplômés en 1939 et partirent sur le terrain de service. En 1941, le nombre d'étudiants augmenta et le site ne permit plus d'extension. Les dirigeants de l'Union, basés à Monterrey sous l'administration de House, décidèrent alors de transférer l'institution à Montemorelos, Nuevo León."
+    }
+  }
+}

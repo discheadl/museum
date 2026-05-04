@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:panorama_viewer/panorama_viewer.dart';
 
 import '../../../data/virtual_tour_demo.dart';
+import '../../../services/museum_cache_manager.dart';
+import '../../../widgets/museum_skeleton.dart';
 
 class TourPanoramaViewer extends StatefulWidget {
   const TourPanoramaViewer({
@@ -11,6 +14,7 @@ class TourPanoramaViewer extends StatefulWidget {
     required this.scene,
     required this.gyroscopeEnabled,
     required this.showHotspotHints,
+    this.onViewportTap,
     required this.onNavigateToScene,
     required this.onSelectArtwork,
   });
@@ -30,6 +34,7 @@ class TourPanoramaViewer extends StatefulWidget {
   final VirtualTourScene scene;
   final bool gyroscopeEnabled;
   final bool showHotspotHints;
+  final VoidCallback? onViewportTap;
   final ValueChanged<String> onNavigateToScene;
   final ValueChanged<VirtualTourArtwork> onSelectArtwork;
 
@@ -94,8 +99,13 @@ class _TourPanoramaViewerState extends State<TourPanoramaViewer> {
       sensorControl: widget.gyroscopeEnabled
           ? SensorControl.orientation
           : SensorControl.none,
-      onTap: (double _, double _, double _) => _collapse(),
-      hotspots: widget.scene.hotspots.map(_buildHotspot).toList(growable: false),
+      onTap: (double _, double _, double _) {
+        _collapse();
+        widget.onViewportTap?.call();
+      },
+      hotspots: widget.scene.hotspots
+          .map(_buildHotspot)
+          .toList(growable: false),
       child: _buildPanoramaImage(),
     );
   }
@@ -103,7 +113,32 @@ class _TourPanoramaViewerState extends State<TourPanoramaViewer> {
   Image _buildPanoramaImage() {
     final url = widget.scene.panoramaUrl;
     if (url != null && url.isNotEmpty) {
-      return Image.network(url, fit: BoxFit.cover, gaplessPlayback: true);
+      return Image(
+        image: CachedNetworkImageProvider(
+          url,
+          cacheManager: MuseumCacheManager.instance,
+        ),
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        frameBuilder:
+            (
+              BuildContext context,
+              Widget child,
+              int? frame,
+              bool wasSynchronouslyLoaded,
+            ) {
+              if (wasSynchronouslyLoaded || frame != null) {
+                return child;
+              }
+              return const Center(
+                child: MuseumSkeleton(
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: BorderRadius.zero,
+                ),
+              );
+            },
+      );
     }
     return Image.asset(widget.scene.assetPath, fit: BoxFit.cover);
   }
@@ -193,9 +228,7 @@ class _TourHotspot extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.black.withAlpha(184),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withAlpha(46),
-                      ),
+                      border: Border.all(color: Colors.white.withAlpha(46)),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(

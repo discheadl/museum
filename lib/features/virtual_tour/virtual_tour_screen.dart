@@ -1,12 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../data/virtual_tour_demo.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/locale_controller.dart';
 import '../../models/museum_models.dart';
+import '../../services/museum_cache_manager.dart';
 import '../../services/museum_repository.dart';
-import '../home/home_screen.dart';
+import '../../services/supabase_museum_service.dart';
+import '../../widgets/museum_skeleton.dart';
+import 'widgets/language_selector.dart';
 import 'widgets/tour_artwork_dialog.dart';
-import 'widgets/tour_menu_drawer.dart';
 import 'widgets/tour_navigation_bar.dart';
 import 'widgets/tour_panorama_viewer.dart';
 
@@ -15,256 +23,248 @@ class VirtualTourScreen extends StatefulWidget {
     super.key,
     required this.repository,
     this.initialSceneId,
+    this.initialRooms,
   });
 
   final MuseumRepository repository;
   final String? initialSceneId;
+  final List<MuseumRoom>? initialRooms;
 
   @override
   State<VirtualTourScreen> createState() => _VirtualTourScreenState();
 }
 
 class _VirtualTourScreenState extends State<VirtualTourScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  static const Map<String, String> _audioAssets = <String, String>{
+    'es': 'assets/audio/espanol.mp3',
+    'en': 'assets/audio/ingles.mp3',
+    'fr': 'assets/audio/frances.mp3',
+  };
+
   final Set<String> _precachedScenes = <String>{};
+  final Map<String, VideoPlayerController> _audioControllers =
+      <String, VideoPlayerController>{};
 
   late int _sceneIndex;
-  bool _gyroscopeEnabled = false;
-  bool _showHotspotHints = true;
+  final bool _gyroscopeEnabled = false;
+  final bool _showHotspotHints = true;
+  bool _navigationControlsVisible = true;
+  bool _languageMenuVisible = false;
+  bool _isAudioSeeking = false;
+  String? _audioLanguageCode;
+  Future<void>? _audioSetupFuture;
 
-  List<VirtualTourScene> _scenes = const <VirtualTourScene>[];
+  List<MuseumRoom> _rooms = const <MuseumRoom>[];
   Object? _loadError;
 
-  VirtualTourScene? get _scene =>
-      _scenes.isEmpty ? null : _scenes[_sceneIndex];
+  MuseumRoom? get _currentRoom => _rooms.isEmpty ? null : _rooms[_sceneIndex];
 
   @override
   void initState() {
     super.initState();
     _sceneIndex = 0;
-    _loadScenes();
+    _audioSetupFuture = _initializeAudioPlayers();
+    if (widget.initialRooms != null && widget.initialRooms!.isNotEmpty) {
+      _applyRooms(widget.initialRooms!);
+      unawaited(_refreshScenes(forceRefresh: true));
+    } else {
+      _bootstrapScenes();
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final scene = _scene;
-      if (scene != null) {
-        _precacheAround(scene);
-      }
-    });
+
+    final String localeCode = AppLocaleScope.of(context).locale.languageCode;
+    unawaited(_syncAudioLanguage(localeCode));
   }
 
-  Future<void> _loadScenes() async {
+  @override
+  void dispose() {
+    for (final VideoPlayerController controller in _audioControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _bootstrapScenes() async {
     try {
-      final List<MuseumRoom> rooms = await widget.repository.fetchRooms();
-
-      if (rooms.isEmpty) {
-        throw Exception(
-          'Supabase no devolvio salas. Revisa que existan filas en la '
-          'tabla `salas` y que las RLS policies permitan SELECT al rol anon.',
-        );
+      final List<MuseumRoom> cachedRooms = await widget.repository
+          .readCachedRooms();
+      if (cachedRooms.isNotEmpty) {
+        _applyRooms(cachedRooms);
       }
 
-      final List<MuseumRoom> withPanoramas = rooms
-          .where((MuseumRoom r) => r.coverUrl.isNotEmpty)
-          .toList(growable: false);
-
-      if (withPanoramas.isEmpty) {
-        throw Exception(
-          'Las salas no tienen `imagen_url`. Sube los panoramas y guarda la '
-          'URL publica en cada fila.',
-        );
-      }
-
-      final scenes = _buildScenesFromRooms(withPanoramas);
-
-      final firstUrl = scenes.first.panoramaUrl;
-      if (firstUrl != null && firstUrl.isNotEmpty && mounted) {
-        try {
-          await precacheImage(NetworkImage(firstUrl), context);
-        } catch (e) {
-          debugPrint('[VirtualTour] precache fallo para $firstUrl: $e');
-        }
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _scenes = scenes;
-        _sceneIndex = _findInitialIndex();
-        _loadError = null;
-      });
-      final current = _scene;
-      if (current != null) {
-        _precacheAround(current);
-      }
+      await _refreshScenes(forceRefresh: true);
     } catch (error, stack) {
       debugPrint('[VirtualTour] error cargando escenas: $error\n$stack');
-      if (!mounted) return;
+      if (!mounted || _rooms.isNotEmpty) return;
       setState(() => _loadError = error);
     }
   }
 
-  List<VirtualTourScene> _buildScenesFromRooms(List<MuseumRoom> rooms) {
+  Future<void> _refreshScenes({required bool forceRefresh}) async {
+    try {
+      final List<MuseumRoom> rooms = await widget.repository.fetchRooms(
+        forceRefresh: forceRefresh,
+      );
+      _applyRooms(rooms);
+    } catch (error, stack) {
+      debugPrint('[VirtualTour] refresh error: $error\n$stack');
+      if (!mounted || _rooms.isNotEmpty) return;
+      setState(() => _loadError = error);
+    }
+  }
+
+  void _applyRooms(List<MuseumRoom> rooms) {
+    if (rooms.isEmpty) {
+      throw const VirtualTourLoadException('roomListEmpty');
+    }
+
+    final List<MuseumRoom> withPanoramas = rooms
+        .where((MuseumRoom room) => room.coverUrl.isNotEmpty)
+        .toList(growable: false);
+
+    if (withPanoramas.isEmpty) {
+      throw const VirtualTourLoadException('roomPanoramaMissing');
+    }
+
+    final int nextIndex = _findInitialIndex(withPanoramas);
+    final bool roomsChanged = !listEquals(_rooms, withPanoramas);
+    final bool indexChanged = _sceneIndex != nextIndex;
+
+    if (!mounted) return;
+    if (roomsChanged || indexChanged || _loadError != null) {
+      setState(() {
+        _rooms = withPanoramas;
+        _sceneIndex = nextIndex;
+        _loadError = null;
+      });
+    }
+
+    unawaited(_precacheAroundIndex(nextIndex));
+  }
+
+  int _findInitialIndex(List<MuseumRoom> rooms) {
+    final String? sceneId = widget.initialSceneId;
+    if (sceneId == null) return 0;
+
+    final int index = rooms.indexWhere((MuseumRoom room) => room.id == sceneId);
+    return index < 0 ? 0 : index;
+  }
+
+  VirtualTourScene _buildSceneForIndex(
+    int index,
+    AppLocalizations localizations,
+  ) {
     const Color exhibitTint = Color(0xFFE76F51);
+    const Color navTint = Color(0xFF2A9D8F);
 
-    final scenes = <VirtualTourScene>[];
-    for (int i = 0; i < rooms.length; i++) {
-      final MuseumRoom room = rooms[i];
-      final hotspots = <VirtualTourHotspot>[];
+    final MuseumRoom room = _rooms[index];
+    final List<VirtualTourHotspot> hotspots = <VirtualTourHotspot>[];
+    final double navYaw = room.yaw ?? (index == 0 ? 202 : 30);
+    final double navPitch = room.pitch ?? -8;
 
-      final double navYaw = room.yaw ?? (i == 0 ? 202 : 30);
-      final double navPitch = room.pitch ?? -8;
-      const Color navTint = Color(0xFF2A9D8F);
-
-      if (i < rooms.length - 1) {
-        final MuseumRoom next = rooms[i + 1];
-        hotspots.add(
-          VirtualTourHotspot.navigation(
-            id: '${room.id}_next',
-            label: 'Ir a ${next.title}',
-            targetSceneId: next.id,
-            longitude: navYaw,
-            latitude: navPitch,
-            tint: navTint,
+    if (index < _rooms.length - 1) {
+      final MuseumRoom next = _rooms[index + 1];
+      final String nextTitle = localizations.roomTitle(next.id, next.title);
+      hotspots.add(
+        VirtualTourHotspot.navigation(
+          id: '${room.id}_next',
+          label: localizations.text(
+            'tour.goToRoom',
+            params: <String, String>{'title': nextTitle},
           ),
-        );
-      } else if (i > 0) {
-        final MuseumRoom prev = rooms[i - 1];
-        hotspots.add(
-          VirtualTourHotspot.navigation(
-            id: '${room.id}_prev',
-            label: 'Ir a ${prev.title}',
-            targetSceneId: prev.id,
-            longitude: navYaw,
-            latitude: navPitch,
-            tint: navTint,
+          targetSceneId: next.id,
+          longitude: navYaw,
+          latitude: navPitch,
+          tint: navTint,
+        ),
+      );
+    } else if (index > 0) {
+      final MuseumRoom previous = _rooms[index - 1];
+      final String previousTitle = localizations.roomTitle(
+        previous.id,
+        previous.title,
+      );
+      hotspots.add(
+        VirtualTourHotspot.navigation(
+          id: '${room.id}_prev',
+          label: localizations.text(
+            'tour.goToRoom',
+            params: <String, String>{'title': previousTitle},
           ),
-        );
-      }
-
-      for (final MuseumExhibit exhibit in room.exhibits) {
-        final double? yaw = exhibit.yaw;
-        final double? pitch = exhibit.pitch;
-        if (yaw == null || pitch == null) continue;
-
-        hotspots.add(
-          VirtualTourHotspot.info(
-            id: 'exhibit_${exhibit.id}',
-            label: exhibit.title,
-            artwork: VirtualTourArtwork(
-              id: exhibit.id,
-              title: exhibit.title,
-              subtitle: exhibit.subtitle,
-              description: exhibit.description,
-              author: '',
-              dateLabel: '',
-              context: '',
-              imagePath: exhibit.mediaUrl,
-            ),
-            longitude: yaw,
-            latitude: pitch,
-            tint: exhibitTint,
-          ),
-        );
-      }
-
-      scenes.add(
-        VirtualTourScene(
-          id: room.id,
-          title: room.title,
-          caption: room.subtitle,
-          assetPath: '',
-          initialLongitude: 0,
-          initialLatitude: 0,
-          hotspots: hotspots,
-          panoramaUrl: room.coverUrl,
+          targetSceneId: previous.id,
+          longitude: navYaw,
+          latitude: navPitch,
+          tint: navTint,
         ),
       );
     }
-    return scenes;
+
+    for (final MuseumExhibit exhibit in room.exhibits) {
+      final double? yaw = exhibit.yaw;
+      final double? pitch = exhibit.pitch;
+      if (yaw == null || pitch == null) continue;
+
+      final String exhibitTitle = localizations.exhibitTitle(
+        exhibit.id,
+        exhibit.title,
+      );
+      hotspots.add(
+        VirtualTourHotspot.info(
+          id: 'exhibit_${exhibit.id}',
+          label: exhibitTitle,
+          artwork: VirtualTourArtwork(
+            id: exhibit.id,
+            title: exhibitTitle,
+            subtitle: localizations.exhibitSubtitle(
+              exhibit.id,
+              exhibit.subtitle,
+            ),
+            description: localizations.exhibitDescription(
+              exhibit.id,
+              exhibit.description,
+            ),
+            author: '',
+            dateLabel: '',
+            context: '',
+            imagePath: exhibit.mediaUrl,
+          ),
+          longitude: yaw,
+          latitude: pitch,
+          tint: exhibitTint,
+        ),
+      );
+    }
+
+    return VirtualTourScene(
+      id: room.id,
+      title: localizations.roomTitle(room.id, room.title),
+      caption: localizations.roomSubtitle(room.id, room.subtitle),
+      assetPath: '',
+      initialLongitude: 0,
+      initialLatitude: 0,
+      hotspots: hotspots,
+      panoramaUrl: room.coverUrl,
+    );
   }
 
   void _retryLoad() {
     setState(() => _loadError = null);
-    _loadScenes();
-  }
-
-  int _findInitialIndex() {
-    final sceneId = widget.initialSceneId;
-    if (sceneId == null) return 0;
-
-    final index = _scenes.indexWhere(
-      (VirtualTourScene scene) => scene.id == sceneId,
-    );
-    return index < 0 ? 0 : index;
-  }
-
-  void _openDrawer() {
-    _scaffoldKey.currentState?.openDrawer();
+    _bootstrapScenes();
   }
 
   void _goToScene(String sceneId) {
-    if (_scenes.isEmpty) return;
-    final nextIndex = _scenes.indexWhere(
-      (VirtualTourScene scene) => scene.id == sceneId,
+    if (_rooms.isEmpty) return;
+    final int nextIndex = _rooms.indexWhere(
+      (MuseumRoom room) => room.id == sceneId,
     );
     if (nextIndex < 0 || nextIndex == _sceneIndex) return;
 
-    _precacheAround(_scenes[nextIndex]);
+    _precacheAroundIndex(nextIndex);
     setState(() => _sceneIndex = nextIndex);
-  }
-
-  void _goToAdjacent(int delta) {
-    if (_scenes.isEmpty) return;
-    final nextIndex = (_sceneIndex + delta).clamp(0, _scenes.length - 1);
-    if (nextIndex == _sceneIndex) return;
-
-    _precacheAround(_scenes[nextIndex]);
-    setState(() => _sceneIndex = nextIndex);
-  }
-
-  void _restartTour() {
-    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
-      Navigator.of(context).pop();
-    }
-    setState(() => _sceneIndex = 0);
-  }
-
-  Future<void> _openGallery() async {
-    if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
-      Navigator.of(context).pop();
-    }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(repository: widget.repository),
-      ),
-    );
-  }
-
-  Future<void> _showMuseumInfo() async {
-    Navigator.of(context).pop();
-    await showDialog<void>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Informacion del museo'),
-          content: const Text(
-            'Recorrido virtual del museo con panoramicas 360, hotspots de '
-            'navegacion y fichas de obra. Usa el menu para abrir la galeria, '
-            'activar giroscopio o reiniciar el circuito.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _showArtworkInfo(VirtualTourArtwork artwork) async {
@@ -275,239 +275,263 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
     );
   }
 
-  Future<void> _handleClose() async {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-      return;
-    }
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: const Color(0xFF11161B),
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'Salir del recorrido',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Puedes volver a la galeria o cerrar la aplicacion.',
-                  style: TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    _openGallery();
-                  },
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: const Text('Ir a la galeria'),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: BorderSide(
-                      color: Colors.white.withAlpha((0.18 * 255).round()),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    SystemNavigator.pop();
-                  },
-                  icon: const Icon(Icons.close_rounded),
-                  label: const Text('Cerrar aplicacion'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  void _hideNavigationControls() {
+    if (!_navigationControlsVisible) return;
+    setState(() => _navigationControlsVisible = false);
   }
 
-  void _precacheAround(VirtualTourScene scene) {
-    if (_scenes.isEmpty) return;
-    _precacheScene(scene);
+  void _showNavigationControls() {
+    if (_navigationControlsVisible) return;
+    setState(() => _navigationControlsVisible = true);
+  }
 
-    final currentIndex = _scenes.indexWhere(
-      (VirtualTourScene item) => item.id == scene.id,
-    );
+  void _toggleLanguageMenu() {
+    setState(() => _languageMenuVisible = !_languageMenuVisible);
+  }
 
-    if (currentIndex > 0) {
-      _precacheScene(_scenes[currentIndex - 1]);
-    }
+  Future<void> _initializeAudioPlayers() async {
+    if (_audioControllers.isNotEmpty) return;
 
-    if (currentIndex >= 0 && currentIndex < _scenes.length - 1) {
-      _precacheScene(_scenes[currentIndex + 1]);
-    }
-
-    for (final VirtualTourHotspot hotspot in scene.hotspots) {
-      if (hotspot.targetSceneId == null) continue;
-
-      final int targetIndex = _scenes.indexWhere(
-        (VirtualTourScene item) => item.id == hotspot.targetSceneId,
+    for (final MapEntry<String, String> entry in _audioAssets.entries) {
+      final VideoPlayerController controller = VideoPlayerController.asset(
+        entry.value,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
       );
-      if (targetIndex >= 0) {
-        _precacheScene(_scenes[targetIndex]);
+      await controller.initialize();
+      await controller.setLooping(false);
+      _audioControllers[entry.key] = controller;
+    }
+  }
+
+  VideoPlayerController? get _activeAudioController {
+    final String? languageCode = _audioLanguageCode;
+    if (languageCode == null) return null;
+    return _audioControllers[languageCode];
+  }
+
+  Duration _clampPosition(Duration position, Duration duration) {
+    if (duration <= Duration.zero) return Duration.zero;
+    if (position < Duration.zero) return Duration.zero;
+    if (position > duration) return duration;
+    return position;
+  }
+
+  Future<void> _syncAudioLanguage(String nextLanguageCode) async {
+    final Future<void>? setupFuture = _audioSetupFuture;
+    if (setupFuture != null) {
+      await setupFuture;
+    }
+
+    final VideoPlayerController? target = _audioControllers[nextLanguageCode];
+    if (target == null) return;
+
+    final VideoPlayerController? current = _activeAudioController;
+    final bool firstActivation = _audioLanguageCode == null;
+    if (!firstActivation && _audioLanguageCode == nextLanguageCode) return;
+
+    final Duration currentPosition = current?.value.position ?? Duration.zero;
+    final bool shouldResumePlayback =
+        firstActivation || (current?.value.isPlaying ?? false);
+
+    if (current != null && current != target && current.value.isInitialized) {
+      await current.pause();
+    }
+
+    await target.seekTo(_clampPosition(currentPosition, target.value.duration));
+
+    if (!mounted) return;
+    setState(() => _audioLanguageCode = nextLanguageCode);
+
+    if (shouldResumePlayback) {
+      await target.play();
+    } else {
+      await target.pause();
+    }
+  }
+
+  Future<void> _toggleAudioPlayback() async {
+    final VideoPlayerController? controller = _activeAudioController;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    if (controller.value.isPlaying) {
+      await controller.pause();
+    } else {
+      if (controller.value.position >= controller.value.duration &&
+          controller.value.duration > Duration.zero) {
+        await controller.seekTo(Duration.zero);
+      }
+      await controller.play();
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _seekAudio(double seconds) async {
+    final VideoPlayerController? controller = _activeAudioController;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    if (mounted) {
+      setState(() => _isAudioSeeking = true);
+    }
+    await controller.seekTo(
+      _clampPosition(
+        Duration(milliseconds: (seconds * 1000).round()),
+        controller.value.duration,
+      ),
+    );
+    if (mounted) {
+      setState(() => _isAudioSeeking = false);
+    }
+  }
+
+  Future<void> _precacheAroundIndex(int index) async {
+    if (_rooms.isEmpty) return;
+    final List<Future<void>> pending = <Future<void>>[
+      _precacheRoom(_rooms[index]),
+    ];
+
+    if (index > 0) {
+      pending.add(_precacheRoom(_rooms[index - 1]));
+    }
+
+    if (index < _rooms.length - 1) {
+      pending.add(_precacheRoom(_rooms[index + 1]));
+    }
+
+    await Future.wait<void>(pending);
+  }
+
+  Future<void> _precacheRoom(MuseumRoom room) async {
+    if (_precachedScenes.contains(room.id) || room.coverUrl.isEmpty) return;
+
+    _precachedScenes.add(room.id);
+    try {
+      await precacheImage(
+        CachedNetworkImageProvider(
+          room.coverUrl,
+          cacheManager: MuseumCacheManager.instance,
+        ),
+        context,
+      );
+    } catch (error) {
+      debugPrint('[VirtualTour] precache fallo para ${room.coverUrl}: $error');
+    }
+  }
+
+  String _localizedErrorMessage(AppLocalizations localizations, Object error) {
+    if (error is VirtualTourLoadException) {
+      switch (error.code) {
+        case 'roomListEmpty':
+          return localizations.text('errors.roomListEmpty');
+        case 'roomPanoramaMissing':
+          return localizations.text('errors.roomPanoramaMissing');
       }
     }
+
+    if (error is SupabaseConfigException) {
+      switch (error.code) {
+        case 'missingCredentials':
+          return localizations.text('errors.supabaseMissingCredentials');
+        case 'unexpectedStatus':
+          return localizations.text('errors.supabaseUnexpectedStatus');
+        case 'invalidResponse':
+          return localizations.text('errors.supabaseInvalidResponse');
+      }
+    }
+
+    return localizations.text('errors.genericLoadFailure');
   }
 
-  void _precacheScene(VirtualTourScene scene) {
-    if (_precachedScenes.contains(scene.id)) return;
-
-    _precachedScenes.add(scene.id);
-    final url = scene.panoramaUrl;
-    if (url != null && url.isNotEmpty) {
-      precacheImage(NetworkImage(url), context);
-    } else {
-      precacheImage(AssetImage(scene.assetPath), context);
+  String? _technicalErrorDetails(Object error) {
+    if (error is SupabaseConfigException) {
+      return error.details;
     }
+    return error is VirtualTourLoadException ? null : error.toString();
   }
 
   @override
   Widget build(BuildContext context) {
-    final scene = _scene;
+    final AppLocalizations localizations = AppLocalizations.of(context);
+    final MuseumRoom? room = _currentRoom;
+    final VirtualTourScene? scene = room == null
+        ? null
+        : _buildSceneForIndex(_sceneIndex, localizations);
+    final AppLocaleController localeController = AppLocaleScope.of(context);
+    final String? errorDetails = _loadError == null
+        ? null
+        : _technicalErrorDetails(_loadError!);
+    final VideoPlayerController? activeAudioController = _activeAudioController;
+    final bool isAudioReady =
+        activeAudioController != null &&
+        activeAudioController.value.isInitialized;
 
     if (scene == null) {
       return Scaffold(
         backgroundColor: Colors.black,
         body: Center(
           child: _loadError != null
-              ? Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const Icon(
-                        Icons.cloud_off_rounded,
-                        color: Colors.white70,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'No fue posible cargar el recorrido desde Supabase.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _loadError.toString(),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: _retryLoad,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
+              ? _TourLoadError(
+                  title: localizations.text('errors.unableToLoadTour'),
+                  message: _localizedErrorMessage(localizations, _loadError!),
+                  details: errorDetails,
+                  retryLabel: localizations.text('actions.retry'),
+                  onRetry: _retryLoad,
                 )
-              : const CircularProgressIndicator(color: Colors.white),
+              : const _TourLoadingSkeleton(),
         ),
       );
     }
 
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: Colors.black,
-      drawer: TourMenuDrawer(
-        gyroscopeEnabled: _gyroscopeEnabled,
-        showHotspotHints: _showHotspotHints,
-        onOpenGallery: _openGallery,
-        onShowMuseumInfo: _showMuseumInfo,
-        onToggleGyroscope: (bool value) {
-          setState(() => _gyroscopeEnabled = value);
-        },
-        onToggleHotspotHints: (bool value) {
-          setState(() => _showHotspotHints = value);
-        },
-        onRestartTour: _restartTour,
-        onExitApp: () {
-          SystemNavigator.pop();
-        },
-      ),
       body: Stack(
         children: <Widget>[
           Positioned.fill(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 420),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              child: TourPanoramaViewer(
-                key: ValueKey<String>('tour_scene_${scene.id}'),
-                scene: scene,
-                gyroscopeEnabled: _gyroscopeEnabled,
-                showHotspotHints: _showHotspotHints,
-                onNavigateToScene: _goToScene,
-                onSelectArtwork: _showArtworkInfo,
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[
-                      Colors.black.withAlpha((0.36 * 255).round()),
-                      Colors.transparent,
-                      Colors.transparent,
-                      Colors.black.withAlpha((0.50 * 255).round()),
-                    ],
-                    stops: const <double>[0, 0.18, 0.66, 1],
-                  ),
+            child: RepaintBoundary(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 420),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: TourPanoramaViewer(
+                  key: ValueKey<String>('tour_scene_${scene.id}'),
+                  scene: scene,
+                  gyroscopeEnabled: _gyroscopeEnabled,
+                  showHotspotHints: _showHotspotHints,
+                  onViewportTap: _showNavigationControls,
+                  onNavigateToScene: _goToScene,
+                  onSelectArtwork: _showArtworkInfo,
                 ),
               ),
             ),
           ),
+          const Positioned.fill(
+            child: IgnorePointer(child: _TourGradientOverlay()),
+          ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 6, 10, 18),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 18),
               child: Column(
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withAlpha((0.58 * 255).round()),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          key: const ValueKey<String>('tour_open_menu'),
-                          onPressed: _openDrawer,
-                          icon: const Icon(
-                            Icons.menu_rounded,
-                            color: Colors.white,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        child: LanguageSelector(
+                          key: ValueKey<String>(
+                            'tour_language_menu_${scene.id}',
                           ),
-                          tooltip: 'Abrir menu',
+                          controller: localeController,
+                          expanded: _languageMenuVisible,
+                          onToggle: _toggleLanguageMenu,
                         ),
                       ),
                       const Spacer(),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        child: _SceneHeader(
-                          key: ValueKey<String>('tour_header_${scene.id}'),
-                          title: scene.title,
+                      Flexible(
+                        child: _CurrentLocationBadge(
+                          label: localizations.text('tour.currentLocation'),
+                          location: scene.title,
                         ),
                       ),
                     ],
@@ -515,12 +539,95 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
                   const Spacer(),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TourNavigationBar(
-                      canGoBack: _sceneIndex > 0,
-                      canGoForward: _sceneIndex < _scenes.length - 1,
-                      onBack: () => _goToAdjacent(-1),
-                      onForward: () => _goToAdjacent(1),
-                      onClose: _handleClose,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: _navigationControlsVisible
+                          ? (activeAudioController == null
+                                ? TourAudioBar(
+                                    key: const ValueKey<String>(
+                                      'tour_audio_visible',
+                                    ),
+                                    isReady: isAudioReady,
+                                    isPlaying: false,
+                                    position: Duration.zero,
+                                    duration: Duration.zero,
+                                    showSlider: _isAudioSeeking,
+                                    playTooltip: localizations.text(
+                                      'audio.play',
+                                    ),
+                                    pauseTooltip: localizations.text(
+                                      'audio.pause',
+                                    ),
+                                    closeTooltip: localizations.text(
+                                      'tour.hideNavigationControls',
+                                    ),
+                                    onTogglePlayback: _toggleAudioPlayback,
+                                    onSeekCommit: (double seconds) {
+                                      unawaited(_seekAudio(seconds));
+                                    },
+                                    onClose: _hideNavigationControls,
+                                  )
+                                : AnimatedBuilder(
+                                    key: const ValueKey<String>(
+                                      'tour_audio_visible',
+                                    ),
+                                    animation: activeAudioController,
+                                    builder: (BuildContext context, _) {
+                                      return TourAudioBar(
+                                        isReady: isAudioReady,
+                                        isPlaying: activeAudioController
+                                            .value
+                                            .isPlaying,
+                                        position: activeAudioController
+                                            .value
+                                            .position,
+                                        duration: activeAudioController
+                                            .value
+                                            .duration,
+                                        showSlider:
+                                            activeAudioController
+                                                .value
+                                                .isPlaying ||
+                                            _isAudioSeeking,
+                                        playTooltip: localizations.text(
+                                          'audio.play',
+                                        ),
+                                        pauseTooltip: localizations.text(
+                                          'audio.pause',
+                                        ),
+                                        closeTooltip: localizations.text(
+                                          'tour.hideNavigationControls',
+                                        ),
+                                        onTogglePlayback: _toggleAudioPlayback,
+                                        onSeekCommit: (double seconds) {
+                                          unawaited(_seekAudio(seconds));
+                                        },
+                                        onClose: _hideNavigationControls,
+                                      );
+                                    },
+                                  ))
+                          : Tooltip(
+                              key: const ValueKey<String>('tour_nav_hidden'),
+                              message: localizations.text(
+                                'tour.showNavigationControls',
+                              ),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withAlpha(160),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withAlpha(28),
+                                  ),
+                                ),
+                                child: IconButton(
+                                  onPressed: _showNavigationControls,
+                                  icon: const Icon(
+                                    Icons.chevron_left_rounded,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -533,36 +640,171 @@ class _VirtualTourScreenState extends State<VirtualTourScreen> {
   }
 }
 
-class _SceneHeader extends StatelessWidget {
-  const _SceneHeader({super.key, required this.title});
+class VirtualTourLoadException implements Exception {
+  const VirtualTourLoadException(this.code);
 
-  final String title;
+  final String code;
+
+  @override
+  String toString() => code;
+}
+
+class _CurrentLocationBadge extends StatelessWidget {
+  const _CurrentLocationBadge({required this.label, required this.location});
+
+  final String label;
+  final String location;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withAlpha(150),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withAlpha(28)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withAlpha(180),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.7,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Icon(
+                    Icons.place_rounded,
+                    color: Color(0xFFF4A261),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      location,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TourGradientOverlay extends StatelessWidget {
+  const _TourGradientOverlay();
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withAlpha((0.56 * 255).round()),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withAlpha((0.12 * 255).round())),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0x5C000000),
+            Colors.transparent,
+            Colors.transparent,
+            Color(0x80000000),
+          ],
+          stops: <double>[0, 0.18, 0.66, 1],
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Icon(Icons.place_rounded, color: Color(0xFFF4A261), size: 18),
-            const SizedBox(width: 8),
+    );
+  }
+}
+
+class _TourLoadingSkeleton extends StatelessWidget {
+  const _TourLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const <Widget>[
+          MuseumSkeleton(width: 280, height: 180),
+          SizedBox(height: 18),
+          MuseumSkeleton(width: 220, height: 18),
+          SizedBox(height: 10),
+          MuseumSkeleton(width: 180, height: 14),
+        ],
+      ),
+    );
+  }
+}
+
+class _TourLoadError extends StatelessWidget {
+  const _TourLoadError({
+    required this.title,
+    required this.message,
+    required this.details,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  final String title;
+  final String message;
+  final String? details;
+  final String retryLabel;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const Icon(Icons.cloud_off_rounded, color: Colors.white70, size: 48),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70),
+          ),
+          if (details != null && details!.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 8),
             Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-              ),
+              details!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ],
-        ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(retryLabel),
+          ),
+        ],
       ),
     );
   }

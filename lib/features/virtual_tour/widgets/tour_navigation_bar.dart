@@ -1,23 +1,51 @@
 import 'package:flutter/material.dart';
 
-class TourNavigationBar extends StatelessWidget {
-  const TourNavigationBar({
+class TourAudioBar extends StatefulWidget {
+  const TourAudioBar({
     super.key,
-    required this.canGoBack,
-    required this.canGoForward,
-    required this.onBack,
-    required this.onForward,
+    required this.isReady,
+    required this.isPlaying,
+    required this.position,
+    required this.duration,
+    required this.showSlider,
+    required this.playTooltip,
+    required this.pauseTooltip,
+    required this.closeTooltip,
+    required this.onTogglePlayback,
+    required this.onSeekCommit,
     required this.onClose,
   });
 
-  final bool canGoBack;
-  final bool canGoForward;
-  final VoidCallback onBack;
-  final VoidCallback onForward;
+  final bool isReady;
+  final bool isPlaying;
+  final Duration position;
+  final Duration duration;
+  final bool showSlider;
+  final String playTooltip;
+  final String pauseTooltip;
+  final String closeTooltip;
+  final VoidCallback onTogglePlayback;
+  final ValueChanged<double> onSeekCommit;
   final VoidCallback onClose;
 
   @override
+  State<TourAudioBar> createState() => _TourAudioBarState();
+}
+
+class _TourAudioBarState extends State<TourAudioBar> {
+  bool _isDragging = false;
+  double? _dragValue;
+
+  @override
   Widget build(BuildContext context) {
+    final double maxSeconds = widget.duration.inMilliseconds <= 0
+        ? 1
+        : widget.duration.inMilliseconds / 1000;
+    final double livePositionSeconds = (widget.position.inMilliseconds / 1000)
+        .clamp(0, maxSeconds);
+    final double sliderValue =
+        (_isDragging ? _dragValue : livePositionSeconds) ?? livePositionSeconds;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.black.withAlpha((0.62 * 255).round()),
@@ -37,27 +65,71 @@ class TourNavigationBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             _NavButton(
-              key: const ValueKey<String>('tour_nav_back'),
-              icon: Icons.arrow_back_rounded,
-              tooltip: 'Espacio anterior',
-              enabled: canGoBack,
-              onPressed: onBack,
+              key: const ValueKey<String>('tour_audio_toggle'),
+              icon: widget.isPlaying
+                  ? Icons.pause_rounded
+                  : Icons.play_arrow_rounded,
+              tooltip: widget.isPlaying
+                  ? widget.pauseTooltip
+                  : widget.playTooltip,
+              enabled: widget.isReady,
+              onPressed: widget.onTogglePlayback,
             ),
-            const SizedBox(width: 12),
-            _NavButton(
-              key: const ValueKey<String>('tour_nav_forward'),
-              icon: Icons.arrow_forward_rounded,
-              tooltip: 'Espacio siguiente',
-              enabled: canGoForward,
-              onPressed: onForward,
-            ),
+            if (widget.showSlider || _isDragging) ...<Widget>[
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 220,
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 7,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 14,
+                    ),
+                    activeTrackColor: const Color(0xFFF4A261),
+                    inactiveTrackColor: Colors.white24,
+                    thumbColor: const Color(0xFFF4A261),
+                    overlayColor: const Color(0x33F4A261),
+                  ),
+                  child: Slider(
+                    value: sliderValue.clamp(0, maxSeconds),
+                    min: 0,
+                    max: maxSeconds,
+                    onChangeStart: widget.isReady
+                        ? (double value) {
+                            setState(() {
+                              _isDragging = true;
+                              _dragValue = value;
+                            });
+                          }
+                        : null,
+                    onChanged: widget.isReady
+                        ? (double value) {
+                            setState(() => _dragValue = value);
+                          }
+                        : null,
+                    onChangeEnd: widget.isReady
+                        ? (double value) {
+                            widget.onSeekCommit(value);
+                            setState(() {
+                              _isDragging = false;
+                              _dragValue = null;
+                            });
+                          }
+                        : null,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(width: 8),
             _NavButton(
-              key: const ValueKey<String>('tour_nav_close'),
+              key: const ValueKey<String>('tour_audio_close'),
               icon: Icons.close_rounded,
-              tooltip: 'Cerrar recorrido',
+              tooltip: widget.closeTooltip,
               enabled: true,
-              onPressed: onClose,
+              onPressed: widget.onClose,
               tint: const Color(0xFFE76F51),
             ),
           ],

@@ -1,0 +1,108 @@
+{
+  "actions": {
+    "retry": "Retry"
+  },
+  "audio": {
+    "play": "Play audio",
+    "pause": "Pause audio"
+  },
+  "artwork": {
+    "authorLabel": "Author",
+    "dateLabel": "Date"
+  },
+  "errors": {
+    "unableToLoadTour": "The tour could not be loaded from Supabase.",
+    "genericLoadFailure": "An error occurred while loading the tour.",
+    "roomListEmpty": "Supabase returned no rooms for the virtual tour.",
+    "roomPanoramaMissing": "The available rooms do not have configured panoramas.",
+    "supabaseMissingCredentials": "Supabase credentials are missing from the project configuration.",
+    "supabaseUnexpectedStatus": "Supabase returned an unexpected status.",
+    "supabaseInvalidResponse": "The Supabase response format is invalid."
+  },
+  "home": {
+    "title": "Welcome to the\nVirtual Museum",
+    "subtitle": "Explore our collection\nand walk through the rooms in 360°.",
+    "cta": "Tap anywhere on\nthe screen to continue",
+    "preparingData": "The app is being prepared and the virtual tour is loading...",
+    "preparingAssets": "The tour images, texts, and audio are being prepared...",
+    "prepareError": "The application could not be prepared."
+  },
+  "tour": {
+    "currentLocation": "CURRENT LOCATION",
+    "goToRoom": "Go to {title}",
+    "hideLanguageMenu": "Hide languages",
+    "previousSpace": "Previous space",
+    "nextSpace": "Next space",
+    "hideNavigationControls": "Hide navigation controls",
+    "showLanguageMenu": "Show languages",
+    "showNavigationControls": "Show navigation controls"
+  },
+  "rooms": {
+    "1aeb729b-dfe1-4225-adcf-16a82bf274db": {
+      "title": "Exterior",
+      "subtitle": "Museum exterior area"
+    },
+    "cc71f147-1d76-420a-a7ce-918437b38ebe": {
+      "title": "Main hall",
+      "subtitle": "Main museum hall"
+    }
+  },
+  "exhibits": {
+    "51d08c5d-9987-4cc4-af2b-936a27630f1e": {
+      "title": "Montemorelos Vocational and Professional College",
+      "description": "The Philanthropic and Educational Civil Association, in its effort to carry out the noble work of educating Mexican youth and guiding them in a special direction through active, progressive education, voted on March 26, 1951 to change the name of the Mexican Agricultural and Industrial School to Montemorelos Vocational and Professional College. In this way, during the 1951-1952 school year, the institution began a new stage under the acronym Covoprom, led by Professor Horacio Hernández Aguirre.\nThe institution's leaders wanted to broaden the academic level and adapt it to the educational challenges of the time, making it more attractive and offering better opportunities to new generations.\nFollowing the principle that \"true education means more than the pursuit of a certain course of study. It is the harmonious development of the physical, mental, and spiritual faculties,\" the institution expanded its industries so that students could study, cover their expenses, and learn a useful vocation at the same time."
+    },
+    "1f858962-64e1-4500-844d-4d7817b04c90": {
+      "title": "La Carlota Estate",
+      "description": "In Mexico, haciendas were land grants that the Spanish crown awarded to its highest-ranking soldiers. They became the most characteristic rural property of colonial Mexico.\nLa Carlota Estate is located at kilometer 906 of the Mexico-Laredo national highway. It belonged to José A. Robertson, a lawyer, journalist, and industrialist who founded the newspaper \"The Monterrey News\" in 1895 and owned the \"La Carlota\" sugar mill. He sold it to Wilheln Werdenhoff in 1912, who later left it to his wife Ana K. S. Skjordal and their children Frank Robert and James Henric Werdenhoff. The estate was later acquired by Carlos Jaime Dávila, who sold it to the Philanthropic and Educational Civil Association.\nIn those years, sugar cane was grown on the estate and raw cane sugar was produced there; in fact, the mill was still operating when the property was purchased. The buildings stood beside a branch of the main irrigation ditch, where the estate building now stands as part of the old structure, although remodeled. The Maintenance Department with its newer buildings also belonged to that complex. Nearby, in the same direction, stood the house where the estate owners lived."
+    },
+    "efb3bf5c-5b1c-4a55-8b0b-d1cebb04e40b": {
+      "title": "Biblical Institute",
+      "description": "Description pending."
+    },
+    "9386243b-b72d-4d27-8315-bb0d0cef5e09": {
+      "title": "Dormitory",
+      "description": "Description pending."
+    },
+    "eaf20e19-6f92-416a-83bd-44d6ab539fc8": {
+      "title": "Mexican Agricultural and Industrial School",
+      "description": "The Mexican Agricultural and Industrial School, founded in 1942, was established with the noble purpose of educating Mexican youth in every branch of general education and, in addition, guiding them in a special way toward the practical activities of agriculture and various trades and industries. To fulfill this mission, the school surrounds students with an environment of study and work so they may acquire a correct concept of life.\nThe purpose of the emerging institution was to help youth reach a high standard. That standard would serve as a firm foundation upon which to build true character."
+    },
+    "8c65af5f-a96b-4b21-b5d5-e22f4a9def4b": {
+      "title": "1995 Secondary Class",
+      "description": "Description pending."
+    },
+    "1b3ce9b1-0f8f-46a4-88ea-026e58e56e54": {
+      "title": "Testimony of Gratitude and Recognition",
+      "description": "Description pending."
+    },
+    "86cff256-37f4-4a48-84e5-993de045165a": {
+      "title": "University of Montemorelos",
+      "description": "Description pending."
+    },
+    "c606ece4-bfa3-4aa1-875b-25c5e2e52033": {
+      "title": "Missionary Boarding School",
+      "description": "Description pending."
+    },
+    "8a69ca34-6790-4625-b9f4-b14575297213": {
+      "title": "Estate",
+      "description": "Description pending."
+    },
+    "77806a18-9073-4717-9012-1fa37d4820d6": {
+      "title": "Young People Working on the Estate",
+      "description": "Description pending."
+    },
+    "89fc3510-71db-4d0f-b6e8-d0df55395f18": {
+      "title": "Young People Working on the Estate",
+      "description": "Description pending."
+    },
+    "57e4f0d4-b902-48ec-9729-38283cd56bbb": {
+      "title": "Workshop",
+      "description": "Description pending."
+    },
+    "fa622ac9-461f-4eba-b1db-03d8ab209267": {
+      "title": "Prosperidad Commercial Institute",
+      "description": "The first Adventist missionaries to arrive in Mexico settled in Guadalajara, Jalisco, in 1894, where the missionary station began with Dante Jones and teacher Ora Osborne.\nThey brought the Christian concept of a holistic education of mind, hand, and heart as a way to strengthen the faith of families and prepare young people to serve the church and society.\nIn 1910, during the administration of George W. Caviness, Adventist education was reactivated in Mexico City by bringing W. A. Yatnell to join Waldo Miramontes in the effort to establish a school that would prepare Mexican youth to become missionaries.\nIn 1931, missionary E. J. Lorns, superintendent of the Mexican Union, called teacher H. F. House to direct the Education Department of the Adventist Church in Mexico. Several locations were considered for the educational center that was needed. In 1935, while C. E. Word served as church superintendent, the Adventist education plan was consolidated with a boarding program in Mexico City at Prosperidad Street No. 85, Escandón neighborhood.\nA small building was fitted out and named \"Prosperidad Commercial Institute,\" with Professor Alfred G. Parfitt as director. It began with a group of 12 young people from several states; they graduated in 1939 and went into the field of service. By 1941, enrollment had grown and the site could no longer be expanded. The Union leaders based in Monterrey, under House's administration, decided to move the institution to Montemorelos, Nuevo León."
+    }
+  }
+}
